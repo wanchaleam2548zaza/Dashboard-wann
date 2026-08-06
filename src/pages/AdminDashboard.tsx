@@ -72,6 +72,11 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
   const [quickAddSubjectDay, setQuickAddSubjectDay] = useState<string | null>(null);
 
 
+  // Homework Form State
+  const [hwTitle, setHwTitle] = useState('');
+  const [hwDueDate, setHwDueDate] = useState('');
+  const [isAddingHw, setIsAddingHw] = useState(false);
+  const [editingHomeworkId, setEditingHomeworkId] = useState<string | null>(null);
   const [quickEditSubject, setQuickEditSubject] = useState<SubjectData | null>(null);
 
   // Search State
