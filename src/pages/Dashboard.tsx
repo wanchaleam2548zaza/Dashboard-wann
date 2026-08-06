@@ -5,8 +5,7 @@ import { doc, updateDoc, setDoc, collection, onSnapshot, addDoc, query, where, d
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
-import { LogOut, Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, List, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LogOut, Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft } from 'lucide-react';
 import type { User as FirebaseUser } from 'firebase/auth';
 
 interface DashboardProps {
@@ -28,7 +27,6 @@ interface HomeworkData {
   id: string;
   title: string;
   subjectId: string;
-  dueDate: string;
   dueDate: string;
   createdAt: string;
 }

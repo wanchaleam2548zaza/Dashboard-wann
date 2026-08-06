@@ -6,7 +6,6 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
 import { Shield, Users, LogOut, LayoutDashboard, PlusCircle, BookOpen, CheckSquare, Pencil, Trash2, Calendar, BarChart2, Bell, Search, X } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 interface AdminDashboardProps {
   onLogout: () => void;
 }
@@ -207,43 +206,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
     }
   };
 
-  const handleAddHomework = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsAddingHw(true);
-    try {
-      const hwData = {
-        title: hwTitle,
-        subjectId: hwSubjectId,
-        dueDate: hwDueDate
-      };
 
-      if (editingHomeworkId) {
-        await updateDoc(doc(db, 'homework', editingHomeworkId), hwData);
-        setEditingHomeworkId(null);
-      } else {
-        await addDoc(collection(db, 'homework'), {
-          ...hwData,
-          createdAt: new Date().toISOString()
-        });
-      }
-
-      setHwTitle('');
-      setHwSubjectId('');
-      setHwDueDate('');
-    } catch (err) {
-      console.error("Error saving homework:", err);
-      alert("Error saving homework");
-    } finally {
-      setIsAddingHw(false);
-    }
-  };
-
-  const handleEditHomeworkClick = (hw: HomeworkData) => {
-    setHwTitle(hw.title);
-    setHwSubjectId(hw.subjectId);
-    setHwDueDate(hw.dueDate);
-    setEditingHomeworkId(hw.id);
-  };
 
   const handleDeleteHomework = async (id: string) => {
     if (confirm("Are you sure you want to delete this homework?")) {
@@ -325,7 +288,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
     acc[subject.id] = homeworkList.filter(hw => hw.subjectId === subject.id);
     return acc;
   }, {} as Record<string, HomeworkData[]>);
-  const unknownHomework = homeworkList.filter(hw => !subjectList.some(s => s.id === hw.subjectId));
+
 
   // Analytics Calculations
   const totalHomework = homeworkList.length;
