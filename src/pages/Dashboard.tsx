@@ -398,7 +398,7 @@ export function Dashboard({ user }: DashboardProps) {
                 {(!groupedSubjects[selectedDay] || groupedSubjects[selectedDay].length === 0) ? (
                    <p style={{ color: 'var(--text-secondary)', paddingLeft: '1rem' }}>No classes on {selectedDay}.</p>
                 ) : (
-                  groupedSubjects[selectedDay].map((subject, index) => (
+                  groupedSubjects[selectedDay].map((subject) => (
                     <div key={subject.id} style={{ position: 'relative' }}>
                       <div style={{
                         position: 'absolute', left: '-1.5rem', top: '0.75rem', width: '10px', height: '10px',
