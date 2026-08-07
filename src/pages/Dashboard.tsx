@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { auth, db } from '../firebase';
-import { signOut } from 'firebase/auth';
+import { signOut, reauthenticateWithCredential, EmailAuthProvider, updatePassword } from 'firebase/auth';
 import { doc, updateDoc, setDoc, collection, onSnapshot, addDoc, query, where, deleteDoc } from 'firebase/firestore';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
-import { LogOut, Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { LogOut, Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft, Camera, Trash2, Lock, Eye, EyeOff, Users, Edit2, Check, Globe } from 'lucide-react';
 import type { User as FirebaseUser } from 'firebase/auth';
+import { useLanguage } from '../contexts/LanguageContext';
+import type { TranslationKey } from '../translations';
 
 interface DashboardProps {
   user: FirebaseUser;
@@ -43,10 +45,11 @@ export interface HomeworkRequestData {
 }
 
 export function Dashboard({ user }: DashboardProps) {
+  const { t, language, setLanguage } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [subjectList, setSubjectList] = useState<SubjectData[]>([]);
   const [homeworkList, setHomeworkList] = useState<HomeworkData[]>([]);
-  const [activeTab, setActiveTab] = useState<'home' | 'schedule' | 'analytics' | 'profile' | 'subject-details'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'schedule' | 'analytics' | 'friends' | 'profile' | 'subject-details'>('home');
   
   const currentDayIndex = new Date().getDay(); // 0 is Sunday
   const defaultDay = currentDayIndex === 0 ? 'Sunday' : 
@@ -73,6 +76,174 @@ export function Dashboard({ user }: DashboardProps) {
   // Homework To-Do State
   const [completedHomeworkIds, setCompletedHomeworkIds] = useState<Set<string>>(new Set());
   const [selectedHomework, setSelectedHomework] = useState<HomeworkData | null>(null);
+
+  // Profile / Avatar State
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarPublicId, setAvatarPublicId] = useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  // Display Name State
+  const [displayName, setDisplayName] = useState('');
+  const [editingDisplayName, setEditingDisplayName] = useState(false);
+  const [displayNameInput, setDisplayNameInput] = useState('');
+  const [savingDisplayName, setSavingDisplayName] = useState(false);
+
+  // Friends / User List State
+  interface UserListItem {
+    id: string;
+    username: string;
+    displayName?: string;
+    avatarUrl?: string;
+    isOnline?: boolean;
+  }
+  const [userList, setUserList] = useState<UserListItem[]>([]);
+
+  // Change Password State
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showOldPw, setShowOldPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwMessage, setPwMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  
+  const [profileLoading, setProfileLoading] = useState(true);
+
+  // Load avatar + displayName from Firestore in real-time
+  useEffect(() => {
+    const userDocRef = doc(db, 'users', user.uid);
+    const unsubMe = onSnapshot(userDocRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data.avatarUrl) setAvatarUrl(data.avatarUrl);
+        else setAvatarUrl(null);
+        
+        if (data.avatarPublicId) setAvatarPublicId(data.avatarPublicId);
+        else setAvatarPublicId(null);
+        
+        const dn = data.displayName || data.username || user.email?.replace('@dashboard.com', '') || '';
+        // Only update input if we aren't currently editing it
+        setDisplayName(dn);
+        setDisplayNameInput(prev => editingDisplayName ? prev : dn);
+      }
+      setProfileLoading(false);
+    }, (err) => {
+      console.error("Error fetching my profile:", err);
+      setProfileLoading(false);
+    });
+
+    // Subscribe to all users for Friends tab
+    const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
+      const list: UserListItem[] = [];
+      snap.forEach(d => {
+        if (d.id !== user.uid) {
+          list.push({ id: d.id, ...d.data() } as UserListItem);
+        }
+      });
+      list.sort((a, b) => (b.isOnline ? 1 : 0) - (a.isOnline ? 1 : 0));
+      setUserList(list);
+    });
+
+    return () => {
+      unsubMe();
+      unsubUsers();
+    };
+  }, [user.uid, editingDisplayName]);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingAvatar(true);
+    try {
+      const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+      const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', uploadPreset);
+      formData.append('folder', 'dashboard_avatars');
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message || 'Upload failed');
+      // If old avatar exists, delete it from Cloudinary first
+      if (avatarPublicId) {
+        await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ public_id: avatarPublicId, upload_preset: uploadPreset }),
+        }).catch(() => {});
+      }
+      // Save new URL + publicId to Firestore
+      const userDocRef = doc(db, 'users', user.uid);
+      await setDoc(userDocRef, { avatarUrl: data.secure_url, avatarPublicId: data.public_id }, { merge: true });
+    } catch (err: any) {
+      console.error('Avatar upload error:', err);
+      alert(`อัปโหลดรูปไม่สำเร็จ: ${err.message || 'Unknown error'}`);
+    } finally {
+      setIsUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteAvatar = async () => {
+    if (!avatarPublicId) return;
+    if (!confirm('ต้องการลบรูปโปรไฟล์ใช่ไหม?')) return;
+    setIsUploadingAvatar(true);
+    try {
+      const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+      const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+      await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ public_id: avatarPublicId, upload_preset: uploadPreset }),
+      });
+      const userDocRef = doc(db, 'users', user.uid);
+      await setDoc(userDocRef, { avatarUrl: null, avatarPublicId: null }, { merge: true });
+    } catch (err: any) {
+      console.error('Delete avatar error:', err);
+      alert(`ลบรูปไม่สำเร็จ: ${err.message || 'Unknown error'}`);
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwMessage(null);
+    if (newPassword !== confirmPassword) {
+      setPwMessage({ type: 'error', text: 'New password and Confirm password do not match!' });
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPwMessage({ type: 'error', text: 'New password must be at least 6 characters.' });
+      return;
+    }
+    setPwLoading(true);
+    try {
+      const credential = EmailAuthProvider.credential(user.email!, oldPassword);
+      await reauthenticateWithCredential(user, credential);
+      await updatePassword(user, newPassword);
+      setPwMessage({ type: 'success', text: 'Password changed successfully! ✅' });
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => { setShowChangePassword(false); setPwMessage(null); }, 2000);
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code;
+      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+        setPwMessage({ type: 'error', text: 'Old password is incorrect.' });
+      } else {
+        setPwMessage({ type: 'error', text: 'Failed to change password. Please try again.' });
+      }
+    } finally {
+      setPwLoading(false);
+    }
+  };
 
   useEffect(() => {
     // Set user online when component mounts. Use setDoc with merge so old users get added automatically.
@@ -280,18 +451,18 @@ export function Dashboard({ user }: DashboardProps) {
         {activeTab === 'home' && (
           <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div>
-              <h2 style={{ fontSize: '1.5rem' }}>Welcome back,</h2>
+              <h2 style={{ fontSize: '1.5rem' }}>{t('home_welcome_back')}</h2>
               <p style={{ color: 'var(--text-secondary)' }}>{user.email?.replace('@dashboard.com', '')}</p>
             </div>
             
             {/* Today's Classes */}
             <Card>
               <h3 style={{ fontSize: '1.125rem', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Clock size={20} /> Today's Classes ({defaultDay})
+                <Clock size={20} /> {t('home_todays_classes')} ({t(`day_${defaultDay}` as TranslationKey)})
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {(!groupedSubjects[defaultDay] || groupedSubjects[defaultDay].length === 0) ? (
-                  <p style={{ textAlign: 'center', color: 'var(--text-secondary)', margin: '1rem 0' }}>No classes today! 🎉</p>
+                  <p style={{ textAlign: 'center', color: 'var(--text-secondary)', margin: '1rem 0' }}>{t('home_no_classes')}</p>
                 ) : (
                   groupedSubjects[defaultDay].map((subject) => (
                     <div 
@@ -315,13 +486,13 @@ export function Dashboard({ user }: DashboardProps) {
             {/* Upcoming Homework */}
             <Card>
               <h3 style={{ fontSize: '1.125rem', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <CheckSquare size={20} /> Urgent Homework
+                <CheckSquare size={20} /> {t('home_urgent_homework')}
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {(() => {
                   const urgentHw = homeworkList.filter(hw => !completedHomeworkIds.has(hw.id)).slice(0, 3);
                   if (urgentHw.length === 0) {
-                    return <p style={{ textAlign: 'center', color: 'var(--text-secondary)', margin: '1rem 0' }}>All caught up! ✨</p>;
+                    return <p style={{ textAlign: 'center', color: 'var(--text-secondary)', margin: '1rem 0' }}>{t('home_all_caught_up')}</p>;
                   }
                   return urgentHw.map(hw => {
                     const subject = subjectList.find(s => s.id === hw.subjectId);
@@ -351,7 +522,7 @@ export function Dashboard({ user }: DashboardProps) {
         {activeTab === 'schedule' && (
           <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <h2 style={{ fontSize: '1.25rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Calendar size={20} /> Class Schedule
+              <Calendar size={20} /> {t('schedule_title')}
             </h2>
             
             {/* Horizontal Day Selector */}
@@ -381,7 +552,7 @@ export function Dashboard({ user }: DashboardProps) {
                     borderBottom: selectedDay !== day ? '1px solid var(--border-color)' : 'none'
                   }}
                 >
-                  {day.substring(0, 3)}
+                  {t(`day_${day}` as TranslationKey).substring(0, 3)}
                 </button>
               ))}
             </div>
@@ -396,7 +567,7 @@ export function Dashboard({ user }: DashboardProps) {
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 {(!groupedSubjects[selectedDay] || groupedSubjects[selectedDay].length === 0) ? (
-                   <p style={{ color: 'var(--text-secondary)', paddingLeft: '1rem' }}>No classes on {selectedDay}.</p>
+                   <p style={{ color: 'var(--text-secondary)', paddingLeft: '1rem' }}>{t('schedule_no_classes_on')} {t(`day_${selectedDay}` as TranslationKey)}.</p>
                 ) : (
                   groupedSubjects[selectedDay].map((subject) => (
                     <div key={subject.id} style={{ position: 'relative' }}>
@@ -436,7 +607,7 @@ export function Dashboard({ user }: DashboardProps) {
             {homeworkRequests.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '2rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
                 <h3 style={{ fontSize: '1.125rem', margin: '0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Clock size={18} /> Your Suggestions
+                  <Clock size={18} /> {t('schedule_your_suggestions')}
                 </h3>
                 {homeworkRequests.map(req => {
                   const subject = subjectList.find(s => s.id === req.subjectId);
@@ -467,28 +638,28 @@ export function Dashboard({ user }: DashboardProps) {
         {activeTab === 'analytics' && (
           <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <h2 style={{ fontSize: '1.25rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <BarChart2 size={20} /> My Workload
+              <BarChart2 size={20} /> {t('workload_title')}
             </h2>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
               <Card style={{ padding: '1rem', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', fontWeight: 500 }}>Total Assignments</div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', fontWeight: 500 }}>{t('workload_total_assignments')}</div>
                 <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--text-primary)' }}>{totalHomework}</div>
               </Card>
               <Card style={{ padding: '1rem', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', fontWeight: 500 }}>Due This Week</div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', fontWeight: 500 }}>{t('workload_due_this_week')}</div>
                 <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--accent-color)' }}>{hwDueThisWeek}</div>
               </Card>
             </div>
 
             <Card style={{ padding: '1.5rem' }}>
               <h3 style={{ fontSize: '1.125rem', margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <BookOpen size={20} /> Homework by Subject
+                <BookOpen size={20} /> {t('workload_homework_by_subject')}
               </h3>
 
               {subjectHwCounts.every(s => s.count === 0) ? (
                 <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
-                  No homework assigned yet!
+                  {t('workload_no_homework')}
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginTop: '1rem' }}>
@@ -499,7 +670,7 @@ export function Dashboard({ user }: DashboardProps) {
                       <div key={subject.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem' }}>
                           <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{subject.name}</span>
-                          <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{subject.count} assignments</span>
+                          <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{subject.count} {t('workload_assignments')}</span>
                         </div>
                         <div style={{ width: '100%', height: '8px', background: 'var(--bg-primary)', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
                           <div style={{ 
@@ -523,26 +694,259 @@ export function Dashboard({ user }: DashboardProps) {
                   <Bell size={20} color="var(--accent-color)" />
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Heaviest Workload</div>
-                  <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{mostActiveSubject.name} ({mostActiveSubject.count} assignments)</div>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>{t('workload_heaviest_workload')}</div>
+                  <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{mostActiveSubject.name} ({mostActiveSubject.count} {t('workload_assignments')})</div>
                 </div>
               </Card>
             )}
           </div>
         )}
 
+        {activeTab === 'friends' && (
+          <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <h2 style={{ fontSize: '1.25rem', margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Users size={22} color="var(--accent-color)" /> {t('friends_title')}
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.875rem' }}>
+              {userList.filter(u => u.isOnline).length} {t('friends_online')} &bull; {userList.length} {t('friends_total')}
+            </p>
+            {userList.length === 0 ? (
+              <Card style={{ padding: '2rem', textAlign: 'center', background: 'var(--bg-secondary)' }}>
+                <p style={{ color: 'var(--text-secondary)', margin: 0 }}>{t('friends_no_students')}</p>
+              </Card>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {userList.map(u => {
+                  const name = u.displayName || u.username || u.id;
+                  const hasDisplayName = !!u.displayName && u.displayName !== u.username;
+                  return (
+                    <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.875rem 1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)' }}>
+                      <div style={{ position: 'relative', flexShrink: 0 }}>
+                        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--bg-primary)', border: '2px solid var(--border-color)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {u.avatarUrl ? (
+                            <img src={u.avatarUrl} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <UserCircle size={28} color="var(--text-secondary)" />
+                          )}
+                        </div>
+                        <div style={{ position: 'absolute', bottom: '1px', right: '1px', width: '12px', height: '12px', borderRadius: '50%', background: u.isOnline ? '#10b981' : '#6b7280', border: '2px solid var(--bg-secondary)' }} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {name}
+                          {hasDisplayName && u.username && (
+                            <span style={{ fontWeight: 400, color: 'var(--text-secondary)', fontSize: '0.75rem', marginLeft: '0.4rem' }}>
+                              @{u.username}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: u.isOnline ? '#10b981' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.1rem' }}>
+                          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: u.isOnline ? '#10b981' : '#6b7280' }} />
+                          {u.isOnline ? t('friends_status_online') : t('friends_status_offline')}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === 'profile' && (
-          <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'center', paddingTop: '2rem' }}>
-            <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'var(--bg-secondary)', border: '4px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <UserCircle size={40} color="var(--text-secondary)" />
+          <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'center', paddingTop: '2rem', width: '100%', maxWidth: '400px', margin: '0 auto' }}>
+            {profileLoading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center', justifyContent: 'center', height: '300px' }}>
+                 <div className="animate-spin" style={{ width: '32px', height: '32px', border: '3px solid var(--border-color)', borderTopColor: 'var(--accent-color)', borderRadius: '50%' }} />
+                 <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Loading profile...</div>
+              </div>
+            ) : (
+              <>
+            {/* Header: Avatar, Name, Email */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%', marginBottom: '1rem' }}>
+              <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
+              <div style={{ position: 'relative' }}>
+                <div 
+                  onClick={() => !isUploadingAvatar && avatarInputRef.current?.click()}
+                  style={{ width: '96px', height: '96px', borderRadius: '50%', background: 'var(--bg-secondary)', border: '2px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', position: 'relative', boxShadow: 'var(--shadow-sm)' }}
+                >
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <UserCircle size={48} color="var(--text-secondary)" />
+                  )}
+                  {isUploadingAvatar && (
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: '24px', height: '24px', border: '3px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => !isUploadingAvatar && avatarInputRef.current?.click()}
+                  style={{ position: 'absolute', bottom: '2px', right: '2px', width: '28px', height: '28px', borderRadius: '50%', background: 'var(--accent-color)', border: '2px solid var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                  title="Change photo"
+                >
+                  <Camera size={14} color="#fff" />
+                </button>
+              </div>
+
+              {avatarUrl && (
+                <button onClick={handleDeleteAvatar} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 500, marginTop: '-0.5rem' }}>
+                  <Trash2 size={13} /> {t('profile_remove_photo')}
+                </button>
+              )}
+
+              <div style={{ textAlign: 'center' }}>
+                <h2 style={{ fontSize: '1.5rem', margin: '0 0 0.25rem 0', fontWeight: 600 }}>{displayName}</h2>
+                <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.875rem' }}>{user.email} &bull; {t('profile_student_account')}</p>
+              </div>
             </div>
-            <div style={{ textAlign: 'center' }}>
-              <h2 style={{ fontSize: '1.25rem', margin: '0 0 0.5rem 0' }}>{user.email?.replace('@dashboard.com', '')}</h2>
-              <p style={{ color: 'var(--text-secondary)', margin: 0 }}>Student Account</p>
+
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              
+              {/* Account Settings Section */}
+              <div>
+                <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', marginLeft: '0.5rem', fontWeight: 600 }}>{t('profile_section_account')}</h3>
+                <Card style={{ padding: 0, overflow: 'hidden', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)' }}>
+                  
+                  {/* Display Name Item */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', borderBottom: '1px solid var(--border-color)' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-md)', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Edit2 size={16} color="var(--accent-color)" />
+                    </div>
+                    {!editingDisplayName ? (
+                      <>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-primary)' }}>{t('profile_display_name')}</div>
+                          <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</div>
+                        </div>
+                        <button onClick={() => { setEditingDisplayName(true); setDisplayNameInput(displayName); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '0.25rem' }}>
+                          <Edit2 size={16} />
+                        </button>
+                      </>
+                    ) : (
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <input
+                          autoFocus
+                          value={displayNameInput}
+                          onChange={e => setDisplayNameInput(e.target.value)}
+                          className="input-field"
+                          placeholder={t('profile_enter_name')}
+                          maxLength={30}
+                          style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                        />
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button disabled={savingDisplayName || !displayNameInput.trim()} onClick={async () => {
+                            if (!displayNameInput.trim()) return;
+                            setSavingDisplayName(true);
+                            try {
+                              await setDoc(doc(db, 'users', user.uid), { displayName: displayNameInput.trim() }, { merge: true });
+                              setEditingDisplayName(false);
+                            } catch (err: any) { alert(`Failed to save: ${err.message}`); }
+                            finally { setSavingDisplayName(false); }
+                          }} className="btn btn-primary" style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem' }}>
+                            {savingDisplayName ? '...' : <><Check size={14} /> {t('profile_save')}</>}
+                          </button>
+                          <button onClick={() => setEditingDisplayName(false)} style={{ padding: '0.4rem 0.75rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.8rem' }}>{t('profile_cancel')}</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Language Item */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-md)', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Globe size={16} color="var(--accent-color)" />
+                      </div>
+                      <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>{t('profile_language')}</span>
+                    </div>
+                    <select
+                      value={language}
+                      onChange={(e) => setLanguage(e.target.value as 'en' | 'th' | 'zh')}
+                      style={{ padding: '0.3rem 0.5rem', borderRadius: 'var(--radius-md)', border: 'none', background: 'transparent', color: 'var(--text-secondary)', outline: 'none', cursor: 'pointer', fontSize: '0.875rem', textAlign: 'right', direction: 'rtl' }}
+                    >
+                      <option value="th">ไทย</option>
+                      <option value="zh">中文</option>
+                      <option value="en">English</option>
+                    </select>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Security Section */}
+              <div>
+                <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', marginLeft: '0.5rem', fontWeight: 600 }}>{t('profile_section_security')}</h3>
+                {!showChangePassword ? (
+                  <Card style={{ width: '100%', padding: '1rem', background: 'var(--bg-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} onClick={() => setShowChangePassword(true)}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-md)', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Lock size={16} color="var(--accent-color)" />
+                      </div>
+                      <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>{t('profile_change_password')}</span>
+                    </div>
+                    <ArrowLeft size={16} color="var(--text-secondary)" style={{ transform: 'rotate(180deg)' }} />
+                  </Card>
+                ) : (
+                  <Card style={{ width: '100%', padding: '1rem', background: 'var(--bg-secondary)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                      <button onClick={() => { setShowChangePassword(false); setPwMessage(null); setOldPassword(''); setNewPassword(''); setConfirmPassword(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
+                        <ArrowLeft size={18} />
+                      </button>
+                      <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Lock size={14} color="var(--accent-color)" /> {t('profile_change_password')}
+                      </h3>
+                    </div>
+
+                    <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div className="input-group">
+                        <label className="input-label" style={{ fontSize: '0.7rem' }}>{t('profile_old_password')}</label>
+                        <div style={{ position: 'relative' }}>
+                          <input type={showOldPw ? 'text' : 'password'} required value={oldPassword} onChange={e => setOldPassword(e.target.value)} className="input-field" placeholder="Enter old password" style={{ padding: '0.5rem', paddingRight: '2.5rem', fontSize: '0.875rem' }} />
+                          <button type="button" onClick={() => setShowOldPw(p => !p)} style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                            {showOldPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="input-group">
+                        <label className="input-label" style={{ fontSize: '0.7rem' }}>{t('profile_new_password')}</label>
+                        <div style={{ position: 'relative' }}>
+                          <input type={showNewPw ? 'text' : 'password'} required value={newPassword} onChange={e => setNewPassword(e.target.value)} className="input-field" placeholder="At least 6 characters" style={{ padding: '0.5rem', paddingRight: '2.5rem', fontSize: '0.875rem' }} />
+                          <button type="button" onClick={() => setShowNewPw(p => !p)} style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                            {showNewPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="input-group">
+                        <label className="input-label" style={{ fontSize: '0.7rem' }}>{t('profile_confirm_password')}</label>
+                        <div style={{ position: 'relative' }}>
+                          <input type={showConfirmPw ? 'text' : 'password'} required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="input-field" placeholder="Repeat new password" style={{ padding: '0.5rem', paddingRight: '2.5rem', fontSize: '0.875rem' }} />
+                          <button type="button" onClick={() => setShowConfirmPw(p => !p)} style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                            {showConfirmPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {pwMessage && (
+                        <div style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)', background: pwMessage.type === 'success' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${pwMessage.type === 'success' ? '#10b981' : '#ef4444'}`, color: pwMessage.type === 'success' ? '#10b981' : '#ef4444', fontSize: '0.75rem' }}>
+                          {pwMessage.text}
+                        </div>
+                      )}
+
+                      <Button type="submit" variant="primary" isLoading={pwLoading} style={{ marginTop: '0.25rem', padding: '0.5rem', fontSize: '0.875rem', justifyContent: 'center' }}>
+                        {t('profile_save')}
+                      </Button>
+                    </form>
+                  </Card>
+                )}
+              </div>
             </div>
-            <Button variant="secondary" onClick={handleSignOut} isLoading={loading} style={{ width: '100%', maxWidth: '300px' }}>
-              <LogOut size={16} /> Sign Out
+
+            <Button variant="secondary" onClick={handleSignOut} isLoading={loading} style={{ width: '100%' }}>
+              <LogOut size={16} /> {t('profile_sign_out')}
             </Button>
+              </>
+            )}
           </div>
         )}
 
@@ -835,19 +1239,27 @@ export function Dashboard({ user }: DashboardProps) {
       }}>
         <button onClick={() => setActiveTab('home')} style={navBtnStyle(activeTab === 'home')}>
           <Home size={20} />
-          <span>Home</span>
+          <span>{t('nav_home')}</span>
         </button>
         <button onClick={() => setActiveTab('schedule')} style={navBtnStyle(activeTab === 'schedule')}>
           <Calendar size={20} />
-          <span>Schedule</span>
+          <span>{t('nav_schedule')}</span>
+        </button>
+        <button onClick={() => setActiveTab('friends')} style={navBtnStyle(activeTab === 'friends')}>
+          <Users size={20} />
+          <span>{t('nav_friends')}</span>
         </button>
         <button onClick={() => setActiveTab('analytics')} style={navBtnStyle(activeTab === 'analytics')}>
           <BarChart2 size={20} />
-          <span>Analytics</span>
+          <span>{t('nav_stats')}</span>
         </button>
         <button onClick={() => setActiveTab('profile')} style={navBtnStyle(activeTab === 'profile')}>
-          <UserCircle size={20} />
-          <span>Profile</span>
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="me" style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover', border: activeTab === 'profile' ? '2px solid var(--accent-color)' : '2px solid var(--border-color)' }} />
+          ) : (
+            <UserCircle size={20} />
+          )}
+          <span>{t('nav_profile')}</span>
         </button>
       </nav>
       {/* Homework Detail Modal */}

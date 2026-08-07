@@ -240,3 +240,6 @@ p { color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.875rem; }
   overflow-y: auto; /* Scroll inside content area only if needed, but we try to fit it */
 }
 
+
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.animate-spin { animation: spin 1s linear infinite; }
