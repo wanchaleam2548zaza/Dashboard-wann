@@ -61,6 +61,7 @@ export function Dashboard({ user }: DashboardProps) {
                      
   const [selectedDay, setSelectedDay] = useState<string>(defaultDay);
   const [selectedSubject, setSelectedSubject] = useState<SubjectData | null>(null);
+  const [subjectHwTab, setSubjectHwTab] = useState<'new' | 'urgent' | 'overdue' | 'completed'>('new');
 
   const [homeworkRequests, setHomeworkRequests] = useState<HomeworkRequestData[]>([]);
   const [showSuggestForm, setShowSuggestForm] = useState(false);
@@ -990,27 +991,74 @@ export function Dashboard({ user }: DashboardProps) {
                   setSuggestSubject(selectedSubject.id);
                   setShowSuggestForm(true);
                 }} style={{ width: '100%', padding: '0.4rem', fontSize: '0.875rem' }}>
-                  <PlusCircle size={14} style={{ marginRight: '0.25rem' }} /> Suggest Homework
+                  <PlusCircle size={14} style={{ marginRight: '0.25rem' }} /> {t('suggest_homework')}
                 </Button>
               </div>
             </Card>
 
             <div>
               <h3 style={{ fontSize: '1.125rem', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <CheckSquare size={20} /> Subject Homework
+                <CheckSquare size={20} /> {t('subject_homework')}
               </h3>
+
+              {/* Tabs */}
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '0.5rem' }}>
+                {(['new', 'urgent', 'overdue', 'completed'] as const).map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setSubjectHwTab(tab)}
+                    style={{
+                      padding: '0.4rem 0.8rem',
+                      borderRadius: 'var(--radius-xl)',
+                      border: 'none',
+                      fontWeight: 600,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      transition: 'all 0.2s',
+                      background: subjectHwTab === tab ? 'var(--accent-color)' : 'var(--bg-secondary)',
+                      color: subjectHwTab === tab ? 'var(--accent-text)' : 'var(--text-secondary)',
+                      boxShadow: subjectHwTab === tab ? 'var(--shadow-sm)' : 'none',
+                    }}
+                  >
+                    {t(`hw_tab_${tab}` as TranslationKey)}
+                  </button>
+                ))}
+              </div>
+
               {(() => {
                 const subjectHomework = homeworkList.filter(hw => hw.subjectId === selectedSubject.id);
-                if (subjectHomework.length === 0) {
+                
+                const now = new Date();
+                now.setHours(0, 0, 0, 0); // Start of today
+                const threeDaysFromNow = new Date(now);
+                threeDaysFromNow.setDate(now.getDate() + 3);
+
+                const filteredHw = subjectHomework.filter(hw => {
+                  const isCompleted = completedHomeworkIds.has(hw.id);
+                  if (subjectHwTab === 'completed') return isCompleted;
+                  if (isCompleted) return false;
+
+                  const dueDate = new Date(hw.dueDate);
+                  dueDate.setHours(0, 0, 0, 0);
+
+                  if (subjectHwTab === 'overdue') return dueDate < now;
+                  if (subjectHwTab === 'urgent') return dueDate >= now && dueDate <= threeDaysFromNow;
+                  if (subjectHwTab === 'new') return dueDate > threeDaysFromNow;
+                  
+                  return true;
+                });
+
+                if (filteredHw.length === 0) {
                   return (
                     <Card style={{ padding: '2rem', textAlign: 'center', background: 'var(--bg-secondary)' }}>
-                      <p style={{ color: 'var(--text-secondary)', margin: 0 }}>No homework assigned for this subject yet. 🎉</p>
+                      <p style={{ color: 'var(--text-secondary)', margin: 0 }}>{t('hw_no_homework_in_tab')}</p>
                     </Card>
                   );
                 }
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {subjectHomework.map(hw => {
+                    {filteredHw.map(hw => {
                       const isCompleted = completedHomeworkIds.has(hw.id);
                       return (
                         <div key={hw.id} onClick={() => setSelectedHomework(hw)} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', cursor: 'pointer', transition: 'background-color 0.2s' }}>
@@ -1020,7 +1068,7 @@ export function Dashboard({ user }: DashboardProps) {
                           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                             <span style={{ color: isCompleted ? 'var(--text-secondary)' : 'var(--text-primary)', textDecoration: isCompleted ? 'line-through' : 'none', fontWeight: 600, fontSize: '1rem' }}>{hw.title}</span> 
                             <span style={{ display: 'inline-flex', alignSelf: 'flex-start', alignItems: 'center', padding: '0.2rem 0.5rem', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-xl)', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                              Deadline: {new Date(hw.dueDate).toLocaleDateString()}
+                              <Calendar size={12} style={{marginRight: '0.2rem'}} /> Deadline: {new Date(hw.dueDate).toLocaleDateString()}
                             </span>
                           </div>
                         </div>
@@ -1039,12 +1087,12 @@ export function Dashboard({ user }: DashboardProps) {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} className="animate-fade-in">
           <Card style={{ padding: '1.5rem', width: '100%', maxWidth: '400px', margin: '1rem', background: 'var(--bg-primary)', border: '1px solid var(--accent-color)' }}>
             <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <PlusCircle size={20} /> Suggest Homework
+              <PlusCircle size={20} /> {t('suggest_homework')}
             </h3>
             <form onSubmit={handleSuggestHomework} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <Input label="Title" value={suggestTitle} onChange={e => setSuggestTitle(e.target.value)} required placeholder="e.g. Chapter 2 Reading" />
+              <Input label={t('form_title_label')} value={suggestTitle} onChange={e => setSuggestTitle(e.target.value)} required placeholder={t('form_title_placeholder')} />
               <div className="input-group">
-                <label className="input-label">Subject</label>
+                <label className="input-label">{t('form_subject_label')}</label>
                 <select
                   required
                   value={suggestSubject}
@@ -1052,16 +1100,16 @@ export function Dashboard({ user }: DashboardProps) {
                   className="input-field"
                   style={{ appearance: 'none' }}
                 >
-                  <option value="" disabled>Select subject</option>
+                  <option value="" disabled>{t('form_select_subject')}</option>
                   {subjectList.map(s => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
                 </select>
               </div>
-              <Input type="date" label="Due Date" value={suggestDueDate} onChange={e => setSuggestDueDate(e.target.value)} required />
+              <Input type="date" label={t('form_due_date_label')} value={suggestDueDate} onChange={e => setSuggestDueDate(e.target.value)} required />
               <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                <Button type="submit" isLoading={isSubmitting} style={{ flex: 1 }}>Submit</Button>
-                <Button type="button" variant="secondary" onClick={() => setShowSuggestForm(false)}>Cancel</Button>
+                <Button type="submit" isLoading={isSubmitting} style={{ flex: 1 }}>{t('form_submit')}</Button>
+                <Button type="button" variant="secondary" onClick={() => setShowSuggestForm(false)}>{t('form_cancel')}</Button>
               </div>
             </form>
           </Card>

@@ -3,8 +3,9 @@ export const translations = {
     // Navigation
     nav_home: "Home",
     nav_schedule: "Schedule",
-    nav_friends: "Friends",
+    nav_analytics: "Analytics",
     nav_stats: "Stats",
+    nav_friends: "Friends",
     nav_profile: "Profile",
 
     // Friends Tab
@@ -12,8 +13,28 @@ export const translations = {
     friends_online: "online",
     friends_total: "total",
     friends_no_students: "No other students yet.",
+    friends_search: "Search friends...",
+    friends_no_results: "No users found.",
     friends_status_online: "Online",
     friends_status_offline: "Offline",
+
+    // Subject Details Tab
+    subject_homework: "Subject Homework",
+    suggest_homework: "Suggest Homework",
+    hw_tab_new: "Upcoming",
+    hw_tab_urgent: "Urgent",
+    hw_tab_overdue: "Overdue",
+    hw_tab_completed: "Completed",
+    hw_no_homework_in_tab: "No homework in this category. 🎉",
+
+    // Forms
+    form_title_label: "Title",
+    form_title_placeholder: "e.g. Chapter 2 Reading",
+    form_subject_label: "Subject",
+    form_select_subject: "Select subject",
+    form_due_date_label: "Due Date",
+    form_submit: "Submit",
+    form_cancel: "Cancel",
 
     // Home Tab
     home_welcome_back: "Welcome back,",
@@ -21,7 +42,7 @@ export const translations = {
     home_urgent_homework: "Urgent Homework",
     home_all_caught_up: "All caught up! ✨",
     home_no_classes: "No classes today! 🎉",
-    
+
     // Schedule Tab
     schedule_title: "Class Schedule",
     schedule_your_suggestions: "Your Suggestions",
@@ -65,19 +86,40 @@ export const translations = {
   },
   th: {
     // Navigation
-    nav_home: "หน้าแรก",
+    nav_home: "หน้าหลัก",
     nav_schedule: "ตารางเรียน",
-    nav_friends: "เพื่อน",
+    nav_analytics: "วิเคราะห์",
     nav_stats: "สถิติ",
+    nav_friends: "เพื่อน",
     nav_profile: "โปรไฟล์",
 
     // Friends Tab
-    friends_title: "รายชื่อเพื่อน",
+    friends_title: "เพื่อน",
     friends_online: "ออนไลน์",
     friends_total: "ทั้งหมด",
     friends_no_students: "ยังไม่มีนักเรียนคนอื่น",
+    friends_search: "ค้นหาเพื่อน...",
+    friends_no_results: "ไม่พบผู้ใช้",
     friends_status_online: "ออนไลน์",
     friends_status_offline: "ออฟไลน์",
+
+    // Subject Details Tab
+    subject_homework: "การบ้านรายวิชา",
+    suggest_homework: "เสนอการบ้าน",
+    hw_tab_new: "ใหม่",
+    hw_tab_urgent: "ใกล้เลยกำหนด",
+    hw_tab_overdue: "เลยกำหนด",
+    hw_tab_completed: "เสร็จแล้ว",
+    hw_no_homework_in_tab: "ไม่มีการบ้านในหมวดหมู่นี้ 🎉",
+
+    // Forms
+    form_title_label: "หัวข้อ",
+    form_title_placeholder: "เช่น อ่านหนังสือบทที่ 2",
+    form_subject_label: "วิชา",
+    form_select_subject: "เลือกวิชา",
+    form_due_date_label: "กำหนดส่ง",
+    form_submit: "ยืนยัน",
+    form_cancel: "ยกเลิก",
 
     // Home Tab
     home_welcome_back: "ยินดีต้อนรับกลับ,",
@@ -85,7 +127,7 @@ export const translations = {
     home_urgent_homework: "การบ้านด่วน",
     home_all_caught_up: "เสร็จหมดแล้ว! ✨",
     home_no_classes: "วันนี้ไม่มีเรียน! 🎉",
-    
+
     // Schedule Tab
     schedule_title: "ตารางเรียน",
     schedule_your_suggestions: "ข้อเสนอแนะของคุณ",
@@ -129,19 +171,40 @@ export const translations = {
   },
   zh: {
     // Navigation
-    nav_home: "首页",
-    nav_schedule: "日程",
-    nav_friends: "朋友",
+    nav_home: "主页",
+    nav_schedule: "课程表",
+    nav_analytics: "分析",
     nav_stats: "统计",
-    nav_profile: "我的",
+    nav_friends: "朋友",
+    nav_profile: "个人资料",
 
     // Friends Tab
-    friends_title: "朋友列表",
+    friends_title: "朋友",
     friends_online: "在线",
     friends_total: "总计",
     friends_no_students: "还没有其他学生。",
+    friends_search: "搜索朋友...",
+    friends_no_results: "未找到用户",
     friends_status_online: "在线",
     friends_status_offline: "离线",
+
+    // Subject Details Tab
+    subject_homework: "科目作业",
+    suggest_homework: "建议作业",
+    hw_tab_new: "新作业",
+    hw_tab_urgent: "紧急",
+    hw_tab_overdue: "已逾期",
+    hw_tab_completed: "已完成",
+    hw_no_homework_in_tab: "此类别没有作业。 🎉",
+
+    // Forms
+    form_title_label: "标题",
+    form_title_placeholder: "例如：阅读第二章",
+    form_subject_label: "科目",
+    form_select_subject: "选择科目",
+    form_due_date_label: "截止日期",
+    form_submit: "提交",
+    form_cancel: "取消",
 
     // Home Tab
     home_welcome_back: "欢迎回来,",
@@ -149,7 +212,7 @@ export const translations = {
     home_urgent_homework: "紧急作业",
     home_all_caught_up: "全部完成！✨",
     home_no_classes: "今天没课！🎉",
-    
+
     // Schedule Tab
     schedule_title: "课程表",
     schedule_your_suggestions: "你的建议",
