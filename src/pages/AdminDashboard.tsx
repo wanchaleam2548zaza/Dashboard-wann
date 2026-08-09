@@ -517,18 +517,19 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
           )}
 
           {activeTab === 'users' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%', maxWidth: '800px' }} className="animate-fade-in">
-              <Card>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-                  <PlusCircle size={24} />
-                  <h3 style={{ fontSize: '1.25rem', margin: 0 }}>Create New User</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', width: '100%', maxWidth: '900px', alignItems: 'flex-start' }} className="animate-fade-in">
+              {/* Create New User */}
+              <Card style={{ padding: '1.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
+                  <PlusCircle size={22} color="var(--accent-color)" />
+                  <h3 style={{ fontSize: '1.125rem', margin: 0, fontWeight: 600 }}>Create New User</h3>
                 </div>
 
-                <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
+                <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.875rem', lineHeight: 1.5 }}>
                   Create a new user account. The user will be able to log in using the username and password you set here.
                 </p>
 
-                <form onSubmit={handleCreateUser} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <form onSubmit={handleCreateUser} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                   <Input
                     label="Username"
                     type="text"
@@ -550,61 +551,74 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
 
                   {message && (
                     <div style={{
-                      color: message.type === 'error' ? '#ef4444' : '#10b981',
+                      color: message.type === 'error' ? '#ef4444' : '#34c759',
                       fontSize: '0.875rem',
                       padding: '0.75rem',
-                      backgroundColor: message.type === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                      backgroundColor: message.type === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(52, 199, 89, 0.1)',
                       borderRadius: 'var(--radius-md)'
                     }}>
                       {message.text}
                     </div>
                   )}
 
-                  <Button type="submit" isLoading={loading} style={{ marginTop: '0.5rem' }}>
+                  <Button type="submit" isLoading={loading} style={{ marginTop: '0.5rem', padding: '0.75rem', fontWeight: 600 }}>
                     Create Account
                   </Button>
                 </form>
               </Card>
 
-              <Card>
-                <h3 style={{ fontSize: '1.25rem', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Users size={24} /> Manage Users
-                </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '400px', overflowY: 'auto' }}>
-                  {userList.map(user => (
-                    <div key={user.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+              {/* Manage Users */}
+              <Card style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', maxHeight: '600px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
+                  <Users size={22} color="var(--accent-color)" />
+                  <h3 style={{ fontSize: '1.125rem', margin: 0, fontWeight: 600 }}>Manage Users</h3>
+                </div>
+                
+                <div style={{ 
+                  display: 'flex', flexDirection: 'column', 
+                  background: 'var(--bg-secondary)', 
+                  borderRadius: '12px', 
+                  overflowY: 'auto',
+                  border: '1px solid var(--border-color)',
+                  flex: 1
+                }}>
+                  {userList.map((user, idx) => (
+                    <div key={user.id} style={{ 
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+                      padding: '0.875rem 1rem', 
+                      borderBottom: idx === userList.length - 1 ? 'none' : '1px solid var(--border-color)'
+                    }}>
                       <div>
-                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{user.username}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Status: {user.isOnline ? 'Online' : 'Offline'}</div>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.95rem' }}>{user.username}</div>
+                        <div style={{ fontSize: '0.75rem', color: user.isOnline ? '#34c759' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '2px' }}>
+                          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: user.isOnline ? '#34c759' : 'var(--text-secondary)' }} />
+                          {user.isOnline ? 'Online' : 'Offline'}
+                        </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Can add homework directly</span>
-                        <label style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Add Homework</span>
+                        <label style={{ position: 'relative', display: 'inline-block', width: '50px', height: '30px', flexShrink: 0 }}>
                           <input 
                             type="checkbox" 
                             checked={!!user.canAddHomework} 
                             onChange={async (e) => {
                               try {
-                                await updateDoc(doc(db, 'users', user.id), {
-                                  canAddHomework: e.target.checked
-                                });
-                              } catch (err) {
-                                alert("Error updating user permission");
-                              }
+                                await updateDoc(doc(db, 'users', user.id), { canAddHomework: e.target.checked });
+                              } catch (err) { alert("Error updating user permission"); }
                             }}
                             style={{ opacity: 0, width: 0, height: 0 }} 
                           />
                           <span style={{ 
                             position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0, 
-                            backgroundColor: user.canAddHomework ? '#10b981' : 'var(--bg-primary)', 
-                            border: '1px solid var(--border-color)',
-                            borderRadius: '24px', transition: '.4s' 
+                            backgroundColor: user.canAddHomework ? '#34c759' : 'var(--border-color)', 
+                            borderRadius: '30px', transition: '.3s' 
                           }}>
                             <span style={{ 
-                              position: 'absolute', content: '""', height: '18px', width: '18px', 
+                              position: 'absolute', content: '""', height: '26px', width: '26px', 
                               left: user.canAddHomework ? '22px' : '2px', bottom: '2px', 
-                              backgroundColor: user.canAddHomework ? 'white' : 'var(--text-secondary)', 
-                              borderRadius: '50%', transition: '.4s' 
+                              backgroundColor: 'white', 
+                              borderRadius: '50%', transition: '.3s',
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                             }} />
                           </span>
                         </label>
