@@ -5,7 +5,7 @@ import { doc, updateDoc, setDoc, collection, onSnapshot, addDoc, query, where, d
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
-import { LogOut, Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft, Camera, Trash2, Lock, Eye, EyeOff, Edit2, Check, Globe, MessageSquare, Send, CornerUpLeft } from 'lucide-react';
+import { LogOut, Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft, Camera, Trash2, Lock, Eye, EyeOff, Edit2, Check, Globe, MessageSquare, Send, CornerUpLeft, Menu } from 'lucide-react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { useLanguage } from '../contexts/LanguageContext';
 import type { TranslationKey } from '../translations';
@@ -64,6 +64,7 @@ export function Dashboard({ user }: DashboardProps) {
   const [theme, setTheme] = useState<'system' | 'light' | 'dark'>(() => {
     return (localStorage.getItem('dashboard_theme') as any) || 'system';
   });
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     if (theme === 'system') {
@@ -601,7 +602,12 @@ export function Dashboard({ user }: DashboardProps) {
         backgroundColor: 'var(--bg-primary)',
         zIndex: 10
       }}>
-        <h1 style={{ margin: 0, fontSize: '1.25rem' }}>Dashboard</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <button onClick={() => setIsMenuOpen(true)} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex' }} title="Menu">
+            <Menu size={24} />
+          </button>
+          <h1 style={{ margin: 0, fontSize: '1.25rem' }}>Dashboard</h1>
+        </div>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <button onClick={() => setShowSearch(true)} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex' }} title="Search">
             <Search size={22} />
@@ -1828,10 +1834,7 @@ export function Dashboard({ user }: DashboardProps) {
           </div>
           <span>{t('nav_chat' as TranslationKey)}</span>
         </button>
-        <button onClick={() => setActiveTab('analytics')} style={navBtnStyle(activeTab === 'analytics')}>
-          <BarChart2 size={20} />
-          <span>{t('nav_stats')}</span>
-        </button>
+
         <button onClick={() => setActiveTab('profile')} style={navBtnStyle(activeTab === 'profile')}>
           {avatarUrl ? (
             <img src={avatarUrl} alt="me" style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover', border: activeTab === 'profile' ? '2px solid var(--accent-color)' : '2px solid var(--border-color)' }} />
@@ -1841,6 +1844,26 @@ export function Dashboard({ user }: DashboardProps) {
           <span>{t('nav_profile')}</span>
         </button>
       </nav>
+
+      {/* Hamburger Sidebar Menu */}
+      {isMenuOpen && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 2000 }} onClick={() => setIsMenuOpen(false)} className="animate-fade-in" />
+          <div style={{ position: 'fixed', top: 0, bottom: 0, left: 0, width: '280px', backgroundColor: 'var(--bg-primary)', zIndex: 2001, transform: 'translateX(0)', transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)', borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column' }} className="animate-slide-up">
+            <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Menu</h2>
+              <button onClick={() => setIsMenuOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={24} /></button>
+            </div>
+            <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <button onClick={() => { setActiveTab('analytics'); setIsMenuOpen(false); }} className="btn btn-secondary" style={{ display: 'flex', justifyContent: 'flex-start', border: 'none', background: activeTab === 'analytics' ? 'var(--bg-secondary)' : 'transparent', padding: '1rem', borderRadius: '12px', alignItems: 'center' }}>
+                <BarChart2 size={20} style={{ color: activeTab === 'analytics' ? 'var(--accent-color)' : 'var(--text-primary)' }} />
+                <span style={{ color: activeTab === 'analytics' ? 'var(--accent-color)' : 'var(--text-primary)', fontWeight: 500 }}>{t('nav_stats' as TranslationKey)}</span>
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Homework Detail Modal */}
       {selectedHomework && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center' }} className="animate-fade-in" onClick={() => setSelectedHomework(null)}>

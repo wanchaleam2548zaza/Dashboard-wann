@@ -5,7 +5,7 @@ import { collection, onSnapshot, setDoc, doc, addDoc, updateDoc, deleteDoc } fro
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
-import { Shield, Users, LogOut, LayoutDashboard, PlusCircle, BookOpen, CheckSquare, Pencil, Trash2, Calendar, BarChart2, Bell, Search, X } from 'lucide-react';
+import { Shield, Users, LogOut, LayoutDashboard, PlusCircle, BookOpen, CheckSquare, Pencil, Trash2, Calendar, BarChart2, Bell, Search, X, Menu } from 'lucide-react';
 interface AdminDashboardProps {
   onLogout: () => void;
 }
@@ -49,7 +49,8 @@ export interface HomeworkRequestData {
 }
 
 export function AdminDashboard({ onLogout }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'subject-details' | 'analytics' | 'notifications'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'subjects' | 'homework' | 'analytics' | 'subject-details' | 'notifications'>('overview');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -327,7 +328,10 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
         backgroundColor: 'var(--bg-primary)',
         zIndex: 10
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <button onClick={() => setIsMenuOpen(true)} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex' }} title="Menu">
+            <Menu size={24} />
+          </button>
           <Shield size={24} color="var(--accent-color)" />
           <h1 style={{ margin: 0, fontSize: '1.25rem' }}>Admin</h1>
         </div>
@@ -962,6 +966,25 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
         </div>
       )}
 
+      {/* Hamburger Sidebar Menu */}
+      {isMenuOpen && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 2000 }} onClick={() => setIsMenuOpen(false)} className="animate-fade-in" />
+          <div style={{ position: 'fixed', top: 0, bottom: 0, left: 0, width: '280px', backgroundColor: 'var(--bg-primary)', zIndex: 2001, transform: 'translateX(0)', transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)', borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column' }} className="animate-slide-up">
+            <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Admin Menu</h2>
+              <button onClick={() => setIsMenuOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={24} /></button>
+            </div>
+            <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <button onClick={() => { setActiveTab('analytics'); setIsMenuOpen(false); }} className="btn btn-secondary" style={{ display: 'flex', justifyContent: 'flex-start', border: 'none', background: activeTab === 'analytics' ? 'var(--bg-secondary)' : 'transparent', padding: '1rem', borderRadius: '12px', alignItems: 'center' }}>
+                <BarChart2 size={20} style={{ color: activeTab === 'analytics' ? 'var(--accent-color)' : 'var(--text-primary)' }} />
+                <span style={{ color: activeTab === 'analytics' ? 'var(--accent-color)' : 'var(--text-primary)', fontWeight: 500 }}>Analytics</span>
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Bottom Navigation */}
       <nav style={{
         position: 'fixed',
@@ -982,10 +1005,6 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
         <button onClick={() => setActiveTab('overview')} style={navBtnStyle(activeTab === 'overview')}>
           <LayoutDashboard size={20} />
           <span>Overview</span>
-        </button>
-        <button onClick={() => setActiveTab('analytics')} style={navBtnStyle(activeTab === 'analytics')}>
-          <BarChart2 size={20} />
-          <span>Analytics</span>
         </button>
         <button onClick={() => setActiveTab('notifications')} style={navBtnStyle(activeTab === 'notifications')}>
           <div style={{ position: 'relative' }}>
