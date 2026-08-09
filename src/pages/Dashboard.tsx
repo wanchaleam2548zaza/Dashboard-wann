@@ -1310,7 +1310,7 @@ export function Dashboard({ user }: DashboardProps) {
                     <select
                       value={language}
                       onChange={(e) => setLanguage(e.target.value as 'en' | 'th' | 'zh')}
-                      style={{ padding: '0.3rem 0.5rem', borderRadius: '8px', border: 'none', background: 'transparent', color: 'var(--text-secondary)', outline: 'none', cursor: 'pointer', fontSize: '0.95rem', textAlign: 'right', direction: 'rtl' }}
+                      className="ios-select-inline"
                     >
                       <option value="th">ไทย</option>
                       <option value="zh">中文</option>
@@ -1329,7 +1329,7 @@ export function Dashboard({ user }: DashboardProps) {
                     <select
                       value={theme}
                       onChange={(e) => setTheme(e.target.value as 'system' | 'light' | 'dark')}
-                      style={{ padding: '0.3rem 0.5rem', borderRadius: '8px', border: 'none', background: 'transparent', color: 'var(--text-secondary)', outline: 'none', cursor: 'pointer', fontSize: '0.95rem', textAlign: 'right', direction: 'rtl' }}
+                      className="ios-select-inline"
                     >
                       <option value="system">{t('profile_theme_system')}</option>
                       <option value="light">{t('profile_theme_light')}</option>
@@ -1621,7 +1621,7 @@ export function Dashboard({ user }: DashboardProps) {
                   required
                   value={suggestSubject}
                   onChange={e => setSuggestSubject(e.target.value)}
-                  className="input-field"
+                  className="ios-select"
                   style={{ appearance: 'none' }}
                 >
                   <option value="" disabled>{t('form_select_subject')}</option>

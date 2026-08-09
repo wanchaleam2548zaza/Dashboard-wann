@@ -24,6 +24,8 @@
 - `homeworkRequests/{id}`: `{ userId, username, title, subjectId, dueDate, status, createdAt }`
 
 - **MUST ALWAYS follow the CSS Theme**: NEVER use hardcoded colors (like #10b981 or 
-ed). ALWAYS use the predefined CSS variables from index.css (e.g., ar(--accent-color), ar(--bg-primary), ar(--text-secondary)) or global classes (e.g., .btn-primary) to ensure Dark/Light mode works seamlessly.
+ed). ALWAYS use the predefined CSS variables from index.css (e.g.,  ar(--accent-color),  ar(--bg-primary),  ar(--text-secondary)) or global classes (e.g., .btn-primary) to ensure Dark/Light mode works seamlessly.
 
-- **ALWAYS Translate UI Text**: All new visible UI text must use the 	('key') function from the useLanguage hook. Hardcoded strings (e.g., >Hello<) are strictly forbidden. If a key doesn't exist, add it to src/translations.ts in English, Thai, and Chinese.
+- **ALWAYS Translate UI Text**: All new visible UI text must use the `t('key')` function from the useLanguage hook. Hardcoded strings (e.g., "Hello") are strictly forbidden. If a key doesn't exist, add it to src/translations.ts in English, Thai, and Chinese.
+
+- **Dropdown (Select) Styling**: Native `<select>` elements look inconsistent and break the iOS app aesthetic. ALWAYS use the `.ios-select` class for form inputs, and `.ios-select-inline` for settings/profile rows to ensure they look like native iOS controls with proper chevrons and alignment.
