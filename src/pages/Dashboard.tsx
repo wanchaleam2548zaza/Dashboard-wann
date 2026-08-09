@@ -5,7 +5,7 @@ import { doc, updateDoc, setDoc, collection, onSnapshot, addDoc, query, where, d
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
-import { LogOut, Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft, Camera, Trash2, Lock, Eye, EyeOff, Edit2, Check, Globe, MessageSquare, Send, CornerUpLeft, Menu } from 'lucide-react';
+import { LogOut, Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft, Camera, Trash2, Lock, Eye, EyeOff, Edit2, Check, Globe, MessageSquare, Send, CornerUpLeft, Menu, Share2 } from 'lucide-react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { useLanguage } from '../contexts/LanguageContext';
 import type { TranslationKey } from '../translations';
@@ -1896,6 +1896,21 @@ export function Dashboard({ user }: DashboardProps) {
                     {t('hw_mark_done' as TranslationKey)}
                   </>
                 )}
+              </button>
+              <button 
+                onClick={() => { 
+                  const subjectName = subjectList.find(s => s.id === selectedHomework.subjectId)?.name || t('form_select_subject' as TranslationKey);
+                  const dueDate = new Date(selectedHomework.dueDate).toLocaleDateString();
+                  setChatInput(`Check out this homework!\n📚 ${subjectName}\n📝 ${selectedHomework.title}\n⏰ Due: ${dueDate}`);
+                  setSelectedHomework(null);
+                  setActiveChatId(null);
+                  setActiveTab('chat');
+                }} 
+                className="btn btn-secondary" 
+                style={{ width: '100%', borderRadius: '12px', border: '1px solid var(--border-color)', background: 'var(--bg-primary)', padding: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 600 }}
+              >
+                <Share2 size={18} />
+                Share to Chat
               </button>
               <button onClick={() => setSelectedHomework(null)} className="btn btn-secondary" style={{ width: '100%', borderRadius: '12px', border: 'none', background: 'transparent', padding: '0.85rem' }}>
                 {t('profile_cancel' as TranslationKey)}
