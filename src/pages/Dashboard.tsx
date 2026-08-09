@@ -873,64 +873,69 @@ export function Dashboard({ user }: DashboardProps) {
               <BarChart2 size={20} /> {t('workload_title')}
             </h2>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-              <Card style={{ padding: '1.5rem', background: 'linear-gradient(135deg, var(--bg-primary), var(--bg-secondary))', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('workload_total_assignments')}</div>
+            {/* Top Stats */}
+            <div style={{ display: 'flex', background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
+              <div style={{ flex: 1, padding: '1.25rem', borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('workload_total_assignments')}</div>
                 <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--text-primary)' }}>{totalHomework}</div>
-              </Card>
-              <Card style={{ padding: '1.5rem', background: 'linear-gradient(135deg, var(--bg-primary), var(--bg-secondary))', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('workload_due_this_week')}</div>
+              </div>
+              <div style={{ flex: 1, padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('workload_due_this_week')}</div>
                 <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--accent-color)' }}>{hwDueThisWeek}</div>
-              </Card>
+              </div>
             </div>
 
-            <Card style={{ padding: '1.5rem' }}>
-              <h3 style={{ fontSize: '1.125rem', margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
-                <BookOpen size={20} color="var(--accent-color)" /> {t('workload_homework_by_subject')}
-              </h3>
-
-              {subjectHwCounts.every(s => s.count === 0) ? (
-                <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
-                  {t('workload_no_homework')}
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                  {subjectHwCounts.map((subject) => {
-                    const maxCount = Math.max(...subjectHwCounts.map(s => s.count));
-                    const percentage = maxCount === 0 ? 0 : (subject.count / maxCount) * 100;
-                    return (
-                      <div key={subject.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem' }}>
-                          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{subject.name}</span>
-                          <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{subject.count} {t('workload_assignments')}</span>
-                        </div>
-                        <div style={{ width: '100%', height: '8px', background: 'var(--bg-secondary)', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
-                          <div style={{ 
-                            width: `${percentage}%`, 
-                            height: '100%', 
-                            background: 'var(--accent-color)', 
-                            borderRadius: '12px',
-                            transition: 'width 0.5s ease-out'
-                          }} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </Card>
-
+            {/* Heaviest Workload */}
             {mostActiveSubject && (
-              <Card style={{ padding: '1.25rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: 'var(--shadow-sm)' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ padding: '1rem', background: 'var(--bg-secondary)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '1rem', border: '1px solid var(--border-color)' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Bell size={20} color="var(--accent-color)" />
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.15rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('workload_heaviest_workload')}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.15rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('workload_heaviest_workload')}</div>
                   <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{mostActiveSubject.name} ({mostActiveSubject.count} {t('workload_assignments')})</div>
                 </div>
-              </Card>
+              </div>
             )}
+
+            {/* Homework by Subject */}
+            <div>
+              <h3 style={{ fontSize: '1.125rem', margin: '0.5rem 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
+                <BookOpen size={20} color="var(--text-primary)" /> {t('workload_homework_by_subject')}
+              </h3>
+              
+              <div style={{ background: 'var(--bg-secondary)', borderRadius: '12px', padding: '1.25rem', border: '1px solid var(--border-color)' }}>
+                {subjectHwCounts.every(s => s.count === 0) ? (
+                  <div style={{ padding: '2rem 0', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                    {t('workload_no_homework')}
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    {subjectHwCounts.map((subject) => {
+                      const maxCount = Math.max(...subjectHwCounts.map(s => s.count));
+                      const percentage = maxCount === 0 ? 0 : (subject.count / maxCount) * 100;
+                      return (
+                        <div key={subject.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem' }}>
+                            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{subject.name}</span>
+                            <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{subject.count} {t('workload_assignments')}</span>
+                          </div>
+                          <div style={{ width: '100%', height: '8px', background: 'var(--bg-primary)', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                            <div style={{ 
+                              width: `${percentage}%`, 
+                              height: '100%', 
+                              background: 'var(--accent-color)', 
+                              borderRadius: '12px',
+                              transition: 'width 0.5s ease-out'
+                            }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
