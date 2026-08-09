@@ -315,80 +315,33 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
   const mostActiveSubject = subjectHwCounts.length > 0 && subjectHwCounts[0].count > 0 ? subjectHwCounts[0] : null;
 
   return (
-    <div className="admin-layout">
-      {/* Sidebar */}
-      <aside className="admin-sidebar">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '3rem' }}>
-          <Shield size={28} color="var(--accent-color)" />
-          <h1 style={{ fontSize: '1.25rem', margin: 0 }}>Admin Panel</h1>
+    <div className="app-container" style={{ paddingBottom: '70px' }}>
+      <header style={{ 
+        padding: '1.5rem', 
+        borderBottom: '1px solid var(--border-color)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        position: 'sticky',
+        top: 0,
+        backgroundColor: 'var(--bg-primary)',
+        zIndex: 10
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Shield size={24} color="var(--accent-color)" />
+          <h1 style={{ margin: 0, fontSize: '1.25rem' }}>Admin</h1>
         </div>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <button onClick={() => setShowSearch(true)} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex' }} title="Search">
+            <Search size={22} />
+          </button>
+          <button onClick={onLogout} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex' }} title="Sign Out">
+            <LogOut size={22} />
+          </button>
+        </div>
+      </header>
 
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
-          <Button
-            variant={activeTab === 'overview' ? 'primary' : 'secondary'}
-            onClick={() => setActiveTab('overview')}
-            style={{ justifyContent: 'flex-start', border: activeTab === 'overview' ? 'none' : 'none', background: activeTab === 'overview' ? 'var(--accent-color)' : 'transparent' }}
-          >
-            <LayoutDashboard size={18} />
-            Overview
-          </Button>
-          <Button
-            variant={activeTab === 'analytics' ? 'primary' : 'secondary'}
-            onClick={() => setActiveTab('analytics')}
-            style={{ justifyContent: 'flex-start', border: activeTab === 'analytics' ? 'none' : 'none', background: activeTab === 'analytics' ? 'var(--accent-color)' : 'transparent' }}
-          >
-            <BarChart2 size={18} />
-            Analytics
-          </Button>
-          <Button
-            variant={activeTab === 'notifications' ? 'primary' : 'secondary'}
-            onClick={() => setActiveTab('notifications')}
-            style={{ justifyContent: 'flex-start', border: activeTab === 'notifications' ? 'none' : 'none', background: activeTab === 'notifications' ? 'var(--accent-color)' : 'transparent', position: 'relative' }}
-          >
-            <Bell size={18} />
-            Notifications
-            {homeworkRequests.filter(r => r.status === 'pending').length > 0 && (
-              <span style={{ position: 'absolute', right: '1rem', background: '#ef4444', color: 'white', borderRadius: '10px', padding: '0.1rem 0.4rem', fontSize: '0.7rem', fontWeight: 600 }}>
-                {homeworkRequests.filter(r => r.status === 'pending').length}
-              </span>
-            )}
-          </Button>
-          <Button
-            variant={activeTab === 'users' ? 'primary' : 'secondary'}
-            onClick={() => setActiveTab('users')}
-            style={{ justifyContent: 'flex-start', border: activeTab === 'users' ? 'none' : 'none', background: activeTab === 'users' ? 'var(--accent-color)' : 'transparent' }}
-          >
-            <Users size={18} />
-            User Management
-          </Button>
-        </nav>
-
-        <Button variant="secondary" onClick={onLogout} style={{ justifyContent: 'center' }}>
-          <LogOut size={18} />
-          Sign Out
-        </Button>
-      </aside>
-
-      {/* Main Content Area */}
-      <main className="admin-main">
-        <header className="admin-header">
-          <h2 style={{ fontSize: '1.5rem', margin: 0 }}>
-            {activeTab === 'overview' && 'System Overview'}
-            {activeTab === 'analytics' && 'Analytics Dashboard'}
-            {activeTab === 'notifications' && 'Notifications'}
-            {activeTab === 'users' && 'User Management'}
-          </h2>
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <button onClick={() => setShowSearch(true)} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex' }} title="Search">
-              <Search size={22} />
-            </button>
-            <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-              Welcome, Administrator
-            </div>
-          </div>
-        </header>
-
-        <div className="admin-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '2rem' }}>
+      <main className="main-content" style={{ padding: '1rem', width: '100%', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
           {activeTab === 'overview' && (
             <div style={{ width: '100%', maxWidth: '1200px', display: 'flex', flexDirection: 'column', gap: '2rem' }} className="animate-fade-in">
@@ -893,7 +846,6 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
             </div>
           )}
 
-        </div>
       </main>
 
       {/* Search Overlay */}
@@ -1010,6 +962,63 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
         </div>
       )}
 
+      {/* Bottom Navigation */}
+      <nav style={{
+        position: 'fixed',
+        bottom: 0,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: '100%',
+        maxWidth: '480px',
+        backgroundColor: 'var(--bg-secondary)',
+        borderTop: '1px solid var(--border-color)',
+        display: 'flex',
+        justifyContent: 'space-around',
+        padding: '0.75rem 0.5rem',
+        paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))',
+        zIndex: 100,
+        boxShadow: '0 -4px 6px -1px rgba(0, 0, 0, 0.05)'
+      }}>
+        <button onClick={() => setActiveTab('overview')} style={navBtnStyle(activeTab === 'overview')}>
+          <LayoutDashboard size={20} />
+          <span>Overview</span>
+        </button>
+        <button onClick={() => setActiveTab('analytics')} style={navBtnStyle(activeTab === 'analytics')}>
+          <BarChart2 size={20} />
+          <span>Analytics</span>
+        </button>
+        <button onClick={() => setActiveTab('notifications')} style={navBtnStyle(activeTab === 'notifications')}>
+          <div style={{ position: 'relative' }}>
+            <Bell size={20} />
+            {homeworkRequests.filter(r => r.status === 'pending').length > 0 && (
+              <div style={{ position: 'absolute', top: '-4px', right: '-8px', background: '#ef4444', color: 'white', fontSize: '0.65rem', fontWeight: 700, minWidth: '16px', height: '16px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 0.2rem', border: '2px solid var(--bg-secondary)' }}>
+                {homeworkRequests.filter(r => r.status === 'pending').length > 99 ? '99+' : homeworkRequests.filter(r => r.status === 'pending').length}
+              </div>
+            )}
+          </div>
+          <span>Alerts</span>
+        </button>
+        <button onClick={() => setActiveTab('users')} style={navBtnStyle(activeTab === 'users')}>
+          <Users size={20} />
+          <span>Users</span>
+        </button>
+      </nav>
+
     </div>
   );
 }
+
+const navBtnStyle = (isActive: boolean): React.CSSProperties => ({
+  background: 'none',
+  border: 'none',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: '0.25rem',
+  color: isActive ? 'var(--accent-color)' : 'var(--text-secondary)',
+  cursor: 'pointer',
+  fontSize: '0.75rem',
+  fontWeight: isActive ? 600 : 500,
+  transition: 'color 0.2s',
+  flex: 1
+});
