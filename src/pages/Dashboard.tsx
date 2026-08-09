@@ -105,6 +105,7 @@ export function Dashboard({ user }: DashboardProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Homework To-Do State
+  const [allCompletedHomework, setAllCompletedHomework] = useState<{userId: string, homeworkId: string}[]>([]);
   const [completedHomeworkIds, setCompletedHomeworkIds] = useState<Set<string>>(new Set());
   const [selectedHomework, setSelectedHomework] = useState<HomeworkData | null>(null);
 
@@ -454,15 +455,20 @@ export function Dashboard({ user }: DashboardProps) {
     );
 
     const unsubscribeCompletions = onSnapshot(
-      query(collection(db, 'completedHomework'), where('userId', '==', user.uid)),
+      collection(db, 'completedHomework'),
       (snapshot) => {
+        const completed: {userId: string, homeworkId: string}[] = [];
         const completedIds = new Set<string>();
         snapshot.forEach((doc) => {
           const data = doc.data();
-          if (data.homeworkId) {
-            completedIds.add(data.homeworkId);
+          if (data.userId && data.homeworkId) {
+            completed.push({ userId: data.userId, homeworkId: data.homeworkId });
+            if (data.userId === user.uid) {
+              completedIds.add(data.homeworkId);
+            }
           }
         });
+        setAllCompletedHomework(completed);
         setCompletedHomeworkIds(completedIds);
       },
       (error) => console.error("Firestore completions error:", error)
@@ -787,6 +793,7 @@ export function Dashboard({ user }: DashboardProps) {
                               <Calendar size={12} /> {new Date(hw.dueDate).toLocaleDateString()}
                             </span>
                           </div>
+                          <CompletedByAvatars homeworkId={hw.id} allCompleted={allCompletedHomework} users={userList} />
                         </div>
                       </div>
                     );
@@ -1148,6 +1155,7 @@ export function Dashboard({ user }: DashboardProps) {
                                     </div>
                                     <div style={{ fontWeight: 600, fontSize: '0.95rem', color: isMe ? 'var(--accent-text)' : 'var(--text-primary)' }}>{hw.title}</div>
                                     <div style={{ fontSize: '0.8rem', opacity: 0.8, color: isMe ? 'var(--accent-text)' : 'var(--text-secondary)' }}>Due: {new Date(hw.dueDate).toLocaleDateString()}</div>
+                                    <CompletedByAvatars homeworkId={hw.id} allCompleted={allCompletedHomework} users={userList} />
                                     <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: isMe ? 'var(--accent-text)' : 'var(--accent-color)', fontWeight: 600, textDecoration: 'underline' }}>Tap to view details</div>
                                   </div>
                                 );
@@ -1616,6 +1624,7 @@ export function Dashboard({ user }: DashboardProps) {
                             <span style={{ display: 'inline-flex', alignSelf: 'flex-start', alignItems: 'center', padding: '0.2rem 0.5rem', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '100px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
                               <Calendar size={12} style={{marginRight: '0.2rem'}} /> Deadline: {new Date(hw.dueDate).toLocaleDateString()}
                             </span>
+                            <CompletedByAvatars homeworkId={hw.id} allCompleted={allCompletedHomework} users={userList} />
                           </div>
                         </div>
                       );
@@ -1730,6 +1739,7 @@ export function Dashboard({ user }: DashboardProps) {
                                   <Calendar size={12} /> Due: {new Date(hw.dueDate).toLocaleDateString()}
                                 </span>
                               </div>
+                              <CompletedByAvatars homeworkId={hw.id} allCompleted={allCompletedHomework} users={userList} />
                             </div>
                           </div>
                         );
@@ -1952,3 +1962,57 @@ const navBtnStyle = (isActive: boolean): React.CSSProperties => ({
   transition: 'color 0.2s',
   flex: 1
 });
+
+const CompletedByAvatars = ({ homeworkId, allCompleted, users }: { homeworkId: string, allCompleted: {userId: string, homeworkId: string}[], users: any[] }) => {
+  const completedUsers = allCompleted.filter(c => c.homeworkId === homeworkId);
+  if (completedUsers.length === 0) return null;
+
+  const maxToShow = 4;
+  const avatarsToShow = completedUsers.slice(0, maxToShow);
+  const extraCount = completedUsers.length - maxToShow;
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', marginTop: '0.75rem' }}>
+      {avatarsToShow.map((cu, idx) => {
+        const u = users.find(user => user.id === cu.userId);
+        if (!u || !u.avatarUrl) return null;
+        return (
+          <img 
+            key={cu.userId} 
+            src={u.avatarUrl} 
+            title={u.displayName || u.username}
+            style={{ 
+              width: '26px', 
+              height: '26px', 
+              borderRadius: '50%', 
+              border: '2px solid var(--bg-secondary)', 
+              marginLeft: idx === 0 ? 0 : '-10px',
+              objectFit: 'cover',
+              zIndex: 10 - idx
+            }} 
+            alt={u.username} 
+          />
+        );
+      })}
+      {extraCount > 0 && (
+        <div style={{
+          width: '26px', 
+          height: '26px', 
+          borderRadius: '50%', 
+          border: '2px solid var(--bg-secondary)', 
+          marginLeft: '-10px',
+          background: 'var(--bg-primary)',
+          color: 'var(--text-secondary)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '0.7rem',
+          fontWeight: 600,
+          zIndex: 0
+        }}>
+          +{extraCount}
+        </div>
+      )}
+    </div>
+  );
+};

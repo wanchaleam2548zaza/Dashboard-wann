@@ -13,6 +13,8 @@ interface AdminDashboardProps {
 interface UserData {
   id: string;
   username: string;
+  displayName?: string;
+  avatarUrl?: string;
   isOnline: boolean;
   createdAt: string;
   canAddHomework?: boolean;
@@ -60,6 +62,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
   const [userList, setUserList] = useState<UserData[]>([]);
   const [subjectList, setSubjectList] = useState<SubjectData[]>([]);
   const [homeworkList, setHomeworkList] = useState<HomeworkData[]>([]);
+  const [allCompletedHomework, setAllCompletedHomework] = useState<{userId: string, homeworkId: string}[]>([]);
   const [homeworkRequests, setHomeworkRequests] = useState<HomeworkRequestData[]>([]);
 
   // Subject Form State
@@ -121,15 +124,30 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
       collection(db, 'homework'),
       (snapshot) => {
         const hw: HomeworkData[] = [];
-        snapshot.forEach((doc) => {
-          hw.push({ id: doc.id, ...doc.data() } as HomeworkData);
-        });
+        snapshot.forEach((doc) => hw.push({ id: doc.id, ...doc.data() } as HomeworkData));
         setHomeworkList(hw);
       },
       (error) => console.error("Firestore homework error:", error)
     );
 
-    const unsubscribeRequests = onSnapshot(
+    // Subscribe to all completed homework
+    const unsubscribeCompletions = onSnapshot(
+      collection(db, 'completedHomework'),
+      (snapshot) => {
+        const completed: {userId: string, homeworkId: string}[] = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.userId && data.homeworkId) {
+            completed.push({ userId: data.userId, homeworkId: data.homeworkId });
+          }
+        });
+        setAllCompletedHomework(completed);
+      },
+      (error) => console.error("Firestore completions error:", error)
+    );
+
+    // Subscribe to homework requests
+    const unsubscribeHwRequests = onSnapshot(
       collection(db, 'homeworkRequests'),
       (snapshot) => {
         const reqs: HomeworkRequestData[] = [];
@@ -145,7 +163,8 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
       unsubscribeUsers();
       unsubscribeSubjects();
       unsubscribeHomework();
-      unsubscribeRequests();
+      unsubscribeCompletions();
+      unsubscribeHwRequests();
     };
   }, []);
 
@@ -717,6 +736,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                             <Calendar size={12} color="var(--accent-color)" /> Due: <strong style={{ color: 'var(--text-primary)' }}>{new Date(hw.dueDate).toLocaleDateString()}</strong>
                           </div>
+                          <CompletedByAvatars homeworkId={hw.id} allCompleted={allCompletedHomework} users={userList} />
                         </div>
                         <div style={{ display: 'flex', gap: '0.75rem' }}>
                           <button onClick={() => { setHwTitle(hw.title); setHwDueDate(hw.dueDate); setEditingHomeworkId(hw.id); }} style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--accent-color)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'} title="Edit"><Pencil size={14} /></button>
@@ -1036,8 +1056,63 @@ const navBtnStyle = (isActive: boolean): React.CSSProperties => ({
   gap: '0.25rem',
   color: isActive ? 'var(--accent-color)' : 'var(--text-secondary)',
   cursor: 'pointer',
+  padding: '0.25rem',
   fontSize: '0.75rem',
   fontWeight: isActive ? 600 : 500,
   transition: 'color 0.2s',
   flex: 1
 });
+
+const CompletedByAvatars = ({ homeworkId, allCompleted, users }: { homeworkId: string, allCompleted: {userId: string, homeworkId: string}[], users: UserData[] }) => {
+  const completedUsers = allCompleted.filter(c => c.homeworkId === homeworkId);
+  if (completedUsers.length === 0) return null;
+
+  const maxToShow = 4;
+  const avatarsToShow = completedUsers.slice(0, maxToShow);
+  const extraCount = completedUsers.length - maxToShow;
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', marginTop: '0.75rem' }}>
+      {avatarsToShow.map((cu, idx) => {
+        const u = users.find(user => user.id === cu.userId);
+        if (!u || !u.avatarUrl) return null;
+        return (
+          <img 
+            key={cu.userId} 
+            src={u.avatarUrl} 
+            title={u.displayName || u.username}
+            style={{ 
+              width: '26px', 
+              height: '26px', 
+              borderRadius: '50%', 
+              border: '2px solid var(--bg-secondary)', 
+              marginLeft: idx === 0 ? 0 : '-10px',
+              objectFit: 'cover',
+              zIndex: 10 - idx
+            }} 
+            alt={u.username} 
+          />
+        );
+      })}
+      {extraCount > 0 && (
+        <div style={{
+          width: '26px', 
+          height: '26px', 
+          borderRadius: '50%', 
+          border: '2px solid var(--bg-secondary)', 
+          marginLeft: '-10px',
+          background: 'var(--bg-primary)',
+          color: 'var(--text-secondary)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '0.7rem',
+          fontWeight: 600,
+          zIndex: 0
+        }}>
+          +{extraCount}
+        </div>
+      )}
+    </div>
+  );
+};
