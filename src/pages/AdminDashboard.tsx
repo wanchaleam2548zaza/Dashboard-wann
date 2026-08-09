@@ -402,10 +402,10 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                   </div>
                 </div>
 
-                <div style={{ 
-                  display: 'flex', flexDirection: 'column', 
-                  background: 'var(--bg-secondary)', 
-                  borderRadius: '12px', 
+                <div style={{
+                  display: 'flex', flexDirection: 'column',
+                  background: 'var(--bg-secondary)',
+                  borderRadius: '12px',
                   overflowY: 'auto',
                   border: '1px solid var(--border-color)',
                   flex: 1
@@ -415,9 +415,9 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                     <p style={{ color: 'var(--text-secondary)', padding: '1rem' }}>No users found.</p>
                   ) : (
                     userList.map((user, idx) => (
-                      <div key={user.id} style={{ 
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
-                        padding: '0.875rem 1rem', 
+                      <div key={user.id} style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '0.875rem 1rem',
                         borderBottom: idx === userList.length - 1 ? 'none' : '1px solid var(--border-color)'
                       }}>
                         <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-primary)' }}>{user.username}</span>
@@ -447,8 +447,8 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                   {daysOfWeek.map(day => {
                     const daySubjects = groupedSubjects[day] || [];
                     return (
-                      <div key={day} style={{ 
-                        display: 'flex', flexDirection: 'column', gap: '0.5rem', 
+                      <div key={day} style={{
+                        display: 'flex', flexDirection: 'column', gap: '0.5rem',
                         minWidth: '240px', scrollSnapAlign: 'start',
                         background: 'var(--bg-secondary)',
                         borderRadius: '16px',
@@ -591,19 +591,19 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                   <Users size={22} color="var(--accent-color)" />
                   <h3 style={{ fontSize: '1.125rem', margin: 0, fontWeight: 600 }}>Manage Users</h3>
                 </div>
-                
-                <div style={{ 
-                  display: 'flex', flexDirection: 'column', 
-                  background: 'var(--bg-secondary)', 
-                  borderRadius: '12px', 
+
+                <div style={{
+                  display: 'flex', flexDirection: 'column',
+                  background: 'var(--bg-secondary)',
+                  borderRadius: '12px',
                   overflowY: 'auto',
                   border: '1px solid var(--border-color)',
                   flex: 1
                 }}>
                   {userList.map((user, idx) => (
-                    <div key={user.id} style={{ 
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-                      padding: '0.875rem 1rem', 
+                    <div key={user.id} style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: '0.875rem 1rem',
                       borderBottom: idx === userList.length - 1 ? 'none' : '1px solid var(--border-color)'
                     }}>
                       <div>
@@ -616,25 +616,25 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Add Homework</span>
                         <label style={{ position: 'relative', display: 'inline-block', width: '50px', height: '30px', flexShrink: 0 }}>
-                          <input 
-                            type="checkbox" 
-                            checked={!!user.canAddHomework} 
+                          <input
+                            type="checkbox"
+                            checked={!!user.canAddHomework}
                             onChange={async (e) => {
                               try {
                                 await updateDoc(doc(db, 'users', user.id), { canAddHomework: e.target.checked });
                               } catch (err) { alert("Error updating user permission"); }
                             }}
-                            style={{ opacity: 0, width: 0, height: 0 }} 
+                            style={{ opacity: 0, width: 0, height: 0 }}
                           />
-                          <span style={{ 
-                            position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0, 
-                            backgroundColor: user.canAddHomework ? '#34c759' : 'var(--border-color)', 
-                            borderRadius: '30px', transition: '.3s' 
+                          <span style={{
+                            position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
+                            backgroundColor: user.canAddHomework ? '#34c759' : 'var(--border-color)',
+                            borderRadius: '30px', transition: '.3s'
                           }}>
-                            <span style={{ 
-                              position: 'absolute', content: '""', height: '26px', width: '26px', 
-                              left: user.canAddHomework ? '22px' : '2px', bottom: '2px', 
-                              backgroundColor: 'white', 
+                            <span style={{
+                              position: 'absolute', content: '""', height: '26px', width: '26px',
+                              left: user.canAddHomework ? '22px' : '2px', bottom: '2px',
+                              backgroundColor: 'white',
                               borderRadius: '50%', transition: '.3s',
                               boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                             }} />
@@ -737,22 +737,22 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                   <h4 style={{ marginBottom: '1.25rem', fontSize: '1.125rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
                     <CheckSquare size={20} color="var(--accent-color)" /> Existing Homework
                   </h4>
-                  <div style={{ 
-                    display: 'flex', flexDirection: 'column', 
-                    background: 'var(--bg-secondary)', 
-                    borderRadius: '12px', 
+                  <div style={{
+                    display: 'flex', flexDirection: 'column',
+                    background: 'var(--bg-secondary)',
+                    borderRadius: '12px',
                     overflowY: 'auto',
                     border: '1px solid var(--border-color)',
-                    flex: 1, 
-                    maxHeight: '500px' 
+                    flex: 1,
+                    maxHeight: '500px'
                   }}>
                     {(() => {
                       const subjectHomework = groupedHomework[quickEditSubject.id] || [];
                       if (subjectHomework.length === 0) return <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', padding: '1.5rem', textAlign: 'center' }}>No homework assigned.</p>;
                       return subjectHomework.map((hw, idx) => (
-                        <div key={hw.id} style={{ 
-                          display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-                          padding: '1rem', 
+                        <div key={hw.id} style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          padding: '1rem',
                           borderBottom: idx === subjectHomework.length - 1 ? 'none' : '1px solid var(--border-color)'
                         }}>
                           <div>
@@ -840,10 +840,10 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                   <Bell size={22} color="var(--accent-color)" /> Homework Requests
                 </h3>
 
-                <div style={{ 
-                  display: 'flex', flexDirection: 'column', 
-                  background: 'var(--bg-secondary)', 
-                  borderRadius: '12px', 
+                <div style={{
+                  display: 'flex', flexDirection: 'column',
+                  background: 'var(--bg-secondary)',
+                  borderRadius: '12px',
                   overflowY: 'auto',
                   border: '1px solid var(--border-color)',
                   flex: 1
@@ -854,8 +854,8 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                     homeworkRequests.map((req, idx) => {
                       const subject = subjectList.find(s => s.id === req.subjectId);
                       return (
-                        <div key={req.id} style={{ 
-                          padding: '1rem', 
+                        <div key={req.id} style={{
+                          padding: '1rem',
                           display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem',
                           borderBottom: idx === homeworkRequests.length - 1 ? 'none' : '1px solid var(--border-color)'
                         }}>
