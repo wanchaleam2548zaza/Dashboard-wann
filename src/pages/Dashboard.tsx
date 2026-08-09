@@ -816,14 +816,8 @@ export function Dashboard({ user }: DashboardProps) {
               ))}
             </div>
 
-            {/* Selected Day Timeline */}
-            <div style={{ position: 'relative', paddingLeft: '1.5rem', marginTop: '1rem' }}>
-              <div style={{ 
-                position: 'absolute', 
-                left: '7px', top: '0', bottom: '0', 
-                width: '2px', background: 'var(--border-color)', borderRadius: '2px'
-              }} />
-              
+            {/* Selected Day Timeline - Flat */}
+            <div style={{ marginTop: '1rem' }}>
               <div style={{ 
                 display: 'flex', flexDirection: 'column', 
                 background: 'var(--bg-secondary)', 
@@ -832,37 +826,35 @@ export function Dashboard({ user }: DashboardProps) {
                 overflow: 'hidden'
               }}>
                 {(!groupedSubjects[selectedDay] || groupedSubjects[selectedDay].length === 0) ? (
-                   <p style={{ color: 'var(--text-secondary)', padding: '1.5rem', textAlign: 'center' }}>{t('schedule_no_classes_on')} {t(`day_${selectedDay}` as TranslationKey)}.</p>
+                   <p style={{ color: 'var(--text-secondary)', padding: '1.5rem', textAlign: 'center', margin: 0 }}>{t('schedule_no_classes_on')} {t(`day_${selectedDay}` as TranslationKey)}.</p>
                 ) : (
                   groupedSubjects[selectedDay].map((subject, idx) => (
-                    <div key={subject.id} style={{ position: 'relative' }}>
-                      <div style={{
-                        position: 'absolute', left: '-1.85rem', top: '1.25rem', width: '12px', height: '12px',
-                        borderRadius: '50%', background: 'var(--accent-color)', border: '2px solid var(--bg-primary)',
-                        boxShadow: '0 0 0 2px var(--border-color)', zIndex: 1
-                      }} />
-                      
-                      <div 
-                        onClick={() => { setSelectedSubject(subject); setActiveTab('subject-details'); }}
-                        style={{ 
-                          padding: '1.25rem 1rem', background: 'var(--bg-secondary)', 
-                          borderBottom: idx === groupedSubjects[selectedDay].length - 1 ? 'none' : '1px solid var(--border-color)', 
-                          cursor: 'pointer',
-                          transition: 'background-color 0.2s ease',
-                          display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-primary)'}
-                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <div>
-                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '1.05rem', marginBottom: '0.25rem' }}>{subject.name}</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><UserIcon size={14} /> {subject.teacher}</span>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><MapPin size={14} /> {subject.room}</span>
-                          </div>
+                    <div 
+                      key={subject.id} 
+                      onClick={() => { setSelectedSubject(subject); setActiveTab('subject-details'); }}
+                      style={{ 
+                        padding: '1rem', background: 'var(--bg-secondary)', 
+                        borderBottom: idx === groupedSubjects[selectedDay].length - 1 ? 'none' : '1px solid var(--border-color)', 
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s ease',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-primary)'}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '1rem', marginBottom: '0.2rem' }}>{subject.name}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><UserIcon size={12} /> {subject.teacher}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><MapPin size={12} /> {subject.room}</span>
                         </div>
-                        <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--accent-color)', background: 'var(--bg-primary)', padding: '0.4rem 0.75rem', borderRadius: '100px' }}>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                           {subject.startTime}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
+                          - {subject.endTime}
                         </div>
                       </div>
                     </div>
