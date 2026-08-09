@@ -1819,10 +1819,7 @@ export function Dashboard({ user }: DashboardProps) {
           <Home size={20} />
           <span>{t('nav_home')}</span>
         </button>
-        <button onClick={() => setActiveTab('schedule')} style={navBtnStyle(activeTab === 'schedule')}>
-          <Calendar size={20} />
-          <span>{t('nav_schedule')}</span>
-        </button>
+
         <button onClick={() => { setActiveTab('chat'); if (activeChatId) setActiveChatId(null); }} style={navBtnStyle(activeTab === 'chat')}>
           <div style={{ position: 'relative' }}>
             <MessageSquare size={20} />
@@ -1855,6 +1852,10 @@ export function Dashboard({ user }: DashboardProps) {
               <button onClick={() => setIsMenuOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={24} /></button>
             </div>
             <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <button onClick={() => { setActiveTab('schedule'); setIsMenuOpen(false); }} className="btn btn-secondary" style={{ display: 'flex', justifyContent: 'flex-start', border: 'none', background: activeTab === 'schedule' ? 'var(--bg-secondary)' : 'transparent', padding: '1rem', borderRadius: '12px', alignItems: 'center' }}>
+                <Calendar size={20} style={{ color: activeTab === 'schedule' ? 'var(--accent-color)' : 'var(--text-primary)' }} />
+                <span style={{ color: activeTab === 'schedule' ? 'var(--accent-color)' : 'var(--text-primary)', fontWeight: 500 }}>{t('nav_schedule' as TranslationKey)}</span>
+              </button>
               <button onClick={() => { setActiveTab('analytics'); setIsMenuOpen(false); }} className="btn btn-secondary" style={{ display: 'flex', justifyContent: 'flex-start', border: 'none', background: activeTab === 'analytics' ? 'var(--bg-secondary)' : 'transparent', padding: '1rem', borderRadius: '12px', alignItems: 'center' }}>
                 <BarChart2 size={20} style={{ color: activeTab === 'analytics' ? 'var(--accent-color)' : 'var(--text-primary)' }} />
                 <span style={{ color: activeTab === 'analytics' ? 'var(--accent-color)' : 'var(--text-primary)', fontWeight: 500 }}>{t('nav_stats' as TranslationKey)}</span>
