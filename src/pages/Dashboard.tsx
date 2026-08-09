@@ -1844,42 +1844,40 @@ export function Dashboard({ user }: DashboardProps) {
       {/* Homework Detail Modal */}
       {selectedHomework && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center' }} className="animate-fade-in" onClick={() => setSelectedHomework(null)}>
-          <Card style={{ padding: '2rem', width: '90%', maxWidth: '400px', margin: '1rem', background: 'var(--bg-primary)', position: 'relative' }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => setSelectedHomework(null)} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-              <X size={24} />
-            </button>
-            
-            <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.25rem', paddingRight: '2rem' }}>{selectedHomework.title}</h3>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--text-secondary)' }}>
-                <BookOpen size={18} />
-                <span style={{ fontWeight: 500 }}>{subjectList.find(s => s.id === selectedHomework.subjectId)?.name || 'Unknown Subject'}</span>
+          <div style={{ padding: '1.5rem', width: '90%', maxWidth: '340px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-xl)', position: 'relative', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-lg)' }} className="animate-scale-in" onClick={e => e.stopPropagation()}>
+            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'var(--bg-primary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', border: '1px solid var(--border-color)' }}>
+                <CheckSquare size={28} color="var(--accent-color)" />
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--text-secondary)' }}>
-                <Calendar size={18} />
-                <span>Due: {new Date(selectedHomework.dueDate).toLocaleDateString()}</span>
-              </div>
+              <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.2rem', fontWeight: 600 }}>{selectedHomework.title}</h3>
+              <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                {subjectList.find(s => s.id === selectedHomework.subjectId)?.name || t('form_select_subject' as TranslationKey)} &bull; {new Date(selectedHomework.dueDate).toLocaleDateString()}
+              </p>
             </div>
 
-            <Button 
-              onClick={() => toggleHomeworkCompletion(selectedHomework.id)} 
-              variant={completedHomeworkIds.has(selectedHomework.id) ? 'secondary' : 'primary'}
-              style={{ width: '100%', justifyContent: 'center', padding: '0.75rem', background: completedHomeworkIds.has(selectedHomework.id) ? 'var(--bg-secondary)' : '#10b981', color: completedHomeworkIds.has(selectedHomework.id) ? 'var(--text-primary)' : 'white', border: completedHomeworkIds.has(selectedHomework.id) ? '1px solid var(--border-color)' : 'none' }}
-            >
-              {completedHomeworkIds.has(selectedHomework.id) ? (
-                <>
-                  <CheckCircle2 size={18} color="#10b981" />
-                  Completed (Click to undo)
-                </>
-              ) : (
-                <>
-                  <CheckSquare size={18} />
-                  Mark as Done
-                </>
-              )}
-            </Button>
-          </Card>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <button 
+                onClick={() => { toggleHomeworkCompletion(selectedHomework.id); setSelectedHomework(null); }} 
+                className="btn"
+                style={{ width: '100%', borderRadius: '12px', background: completedHomeworkIds.has(selectedHomework.id) ? 'var(--bg-primary)' : 'var(--accent-color)', color: completedHomeworkIds.has(selectedHomework.id) ? 'var(--text-primary)' : 'var(--accent-text)', border: completedHomeworkIds.has(selectedHomework.id) ? '1px solid var(--border-color)' : 'none', fontWeight: 600, padding: '0.85rem' }}
+              >
+                {completedHomeworkIds.has(selectedHomework.id) ? (
+                  <>
+                    <CheckCircle2 size={18} color="var(--text-secondary)" />
+                    {t('hw_undo_complete' as TranslationKey)}
+                  </>
+                ) : (
+                  <>
+                    <CheckSquare size={18} />
+                    {t('hw_mark_done' as TranslationKey)}
+                  </>
+                )}
+              </button>
+              <button onClick={() => setSelectedHomework(null)} className="btn btn-secondary" style={{ width: '100%', borderRadius: '12px', border: 'none', background: 'transparent', padding: '0.85rem' }}>
+                {t('profile_cancel' as TranslationKey)}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

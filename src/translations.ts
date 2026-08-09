@@ -45,6 +45,8 @@ export const translations = {
     hw_tab_overdue: "Overdue",
     hw_tab_completed: "Completed",
     hw_no_homework_in_tab: "No homework in this category. 🎉",
+    hw_mark_done: "Mark as Done",
+    hw_undo_complete: "Undo Completion",
     add_homework: "Add Homework",
 
     // Forms
@@ -153,8 +155,10 @@ export const translations = {
     hw_tab_pending: "ยังไม่ทำ",
     hw_tab_urgent: "ใกล้กำหนดส่ง",
     hw_tab_overdue: "เลยกำหนด",
-    hw_tab_completed: "เสร็จแล้ว",
-    hw_no_homework_in_tab: "ไม่มีการบ้านในหมวดหมู่นี้ 🎉",
+    hw_tab_completed: "เสร็จสิ้น",
+    hw_no_homework_in_tab: "ไม่มีการบ้านในหมวดหมู่นี้ ✨",
+    hw_mark_done: "ทำเสร็จแล้ว",
+    hw_undo_complete: "ยกเลิกทำเสร็จแล้ว",
     add_homework: "เพิ่มการบ้าน",
 
     // Forms
@@ -264,7 +268,9 @@ export const translations = {
     hw_tab_urgent: "紧急",
     hw_tab_overdue: "已逾期",
     hw_tab_completed: "已完成",
-    hw_no_homework_in_tab: "此类别没有作业。 🎉",
+    hw_no_homework_in_tab: "此类别中没有作业。 ✨",
+    hw_mark_done: "标记为完成",
+    hw_undo_complete: "撤销完成",
     add_homework: "添加作业",
 
     // Forms
