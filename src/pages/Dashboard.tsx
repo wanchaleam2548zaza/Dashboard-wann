@@ -198,12 +198,24 @@ export function Dashboard({ user }: DashboardProps) {
         
         if (activeChatId !== 'global') {
           const recipientId = activeChatId.replace(user.uid, '').replace('_', '');
+          let displayMsg = msgText;
+          if (msgText.startsWith('[HW_SHARE:')) displayMsg = 'Sent a homework card';
+          
           if (recipientId) {
             setDoc(doc(db, `users/${recipientId}/chats`, activeChatId), {
               unreadCount: increment(1),
-              updatedAt: new Date().toISOString()
+              updatedAt: new Date().toISOString(),
+              lastMessage: displayMsg,
+              lastMessageTime: new Date().toISOString()
             }, { merge: true }).catch(console.error);
           }
+          
+          // Update own chat doc for last message
+          setDoc(doc(db, `users/${user.uid}/chats`, activeChatId), {
+            updatedAt: new Date().toISOString(),
+            lastMessage: displayMsg,
+            lastMessageTime: new Date().toISOString()
+          }, { merge: true }).catch(console.error);
         }
 
         setReplyingTo(null);
@@ -240,7 +252,7 @@ export function Dashboard({ user }: DashboardProps) {
     isOnline?: boolean;
   }
   const [userList, setUserList] = useState<UserListItem[]>([]);
-  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const [chatMetadata, setChatMetadata] = useState<Record<string, {unreadCount: number, lastMessage?: string, lastMessageTime?: string}>>({});
 
   // Change Password State
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -300,11 +312,16 @@ export function Dashboard({ user }: DashboardProps) {
   useEffect(() => {
     if (!user) return;
     const unsub = onSnapshot(collection(db, `users/${user.uid}/chats`), (snap) => {
-      const counts: Record<string, number> = {};
+      const metadata: Record<string, {unreadCount: number, lastMessage?: string, lastMessageTime?: string}> = {};
       snap.forEach(d => {
-        counts[d.id] = d.data().unreadCount || 0;
+        const data = d.data();
+        metadata[d.id] = {
+          unreadCount: data.unreadCount || 0,
+          lastMessage: data.lastMessage,
+          lastMessageTime: data.lastMessageTime
+        };
       });
-      setUnreadCounts(counts);
+      setChatMetadata(metadata);
     });
     return () => unsub();
   }, [user.uid]);
@@ -1028,7 +1045,8 @@ export function Dashboard({ user }: DashboardProps) {
                     {userList.map((u, idx) => {
                       const name = u.displayName || u.username || u.id;
                       const chatId = [user.uid, u.id].sort().join('_');
-                      const unread = unreadCounts[chatId] || 0;
+                      const unread = chatMetadata[chatId]?.unreadCount || 0;
+                      const lastMsg = chatMetadata[chatId]?.lastMessage;
                       return (
                         <div 
                           key={u.id} 
@@ -1057,8 +1075,8 @@ export function Dashboard({ user }: DashboardProps) {
                                 </div>
                               )}
                             </div>
-                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {u.isOnline ? t('friends_status_online' as TranslationKey) : t('friends_status_offline' as TranslationKey)}
+                            <div style={{ fontSize: '0.85rem', color: (unread > 0 && lastMsg) ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: (unread > 0 && lastMsg) ? 600 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {lastMsg ? lastMsg : (u.isOnline ? t('friends_status_online' as TranslationKey) : t('friends_status_offline' as TranslationKey))}
                             </div>
                           </div>
                         </div>
@@ -1142,41 +1160,24 @@ export function Dashboard({ user }: DashboardProps) {
                               </div>
                             )}
                             <div>
-                              {(() => {
-                                const hwMatch = msg.text.match(/\[HW_SHARE:([^\]]+)\]/);
-                                if (!hwMatch) return msg.text;
-                                
-                                const hwId = hwMatch[1].trim();
+                              {msg.text.startsWith('[HW_SHARE:') ? (() => {
+                                const hwId = msg.text.replace('[HW_SHARE:', '').replace(']', '').trim();
                                 const hw = homeworkList.find((h: any) => h.id === hwId);
-                                const textBefore = msg.text.substring(0, hwMatch.index);
-                                const textAfter = msg.text.substring(hwMatch.index! + hwMatch[0].length);
-
+                                if (!hw) return <div style={{ fontStyle: 'italic', opacity: 0.8 }}>Shared homework not found.</div>;
+                                const subject = subjectList.find(s => s.id === hw.subjectId);
                                 return (
-                                  <>
-                                    {textBefore.trim() && <div style={{ whiteSpace: 'pre-wrap', marginBottom: '0.5rem' }}>{textBefore.trim()}</div>}
-                                    
-                                    {hw ? (() => {
-                                      const subject = subjectList.find(s => s.id === hw.subjectId);
-                                      return (
-                                        <div onClick={() => setSelectedHomework(hw)} style={{ cursor: 'pointer', background: isMe ? 'rgba(255,255,255,0.1)' : 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '0.75rem', padding: '0.75rem', marginTop: textBefore.trim() ? '0.5rem' : '0.25rem', marginBottom: textAfter.trim() ? '0.5rem' : 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: isMe ? 'var(--accent-text)' : 'var(--text-secondary)' }}>
-                                            <BookOpen size={16} />
-                                            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{subject?.name || t('form_select_subject' as TranslationKey)}</span>
-                                          </div>
-                                          <div style={{ fontWeight: 600, fontSize: '0.95rem', color: isMe ? 'var(--accent-text)' : 'var(--text-primary)' }}>{hw.title}</div>
-                                          <div style={{ fontSize: '0.8rem', opacity: 0.8, color: isMe ? 'var(--accent-text)' : 'var(--text-secondary)' }}>Due: {new Date(hw.dueDate).toLocaleDateString()}</div>
-                                          <CompletedByAvatars homeworkId={hw.id} allCompleted={allCompletedHomework} users={userList} />
-                                          <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: isMe ? 'var(--accent-text)' : 'var(--accent-color)', fontWeight: 600, textDecoration: 'underline' }}>Tap to view details</div>
-                                        </div>
-                                      );
-                                    })() : (
-                                      <div style={{ fontStyle: 'italic', opacity: 0.8, margin: '0.5rem 0' }}>Shared homework not found.</div>
-                                    )}
-
-                                    {textAfter.trim() && <div style={{ whiteSpace: 'pre-wrap', marginTop: '0.5rem' }}>{textAfter.trim()}</div>}
-                                  </>
+                                  <div onClick={() => setSelectedHomework(hw)} style={{ cursor: 'pointer', background: isMe ? 'rgba(255,255,255,0.1)' : 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '0.75rem', padding: '0.75rem', marginTop: '0.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: isMe ? 'var(--accent-text)' : 'var(--text-secondary)' }}>
+                                      <BookOpen size={16} />
+                                      <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{subject?.name || t('form_select_subject' as TranslationKey)}</span>
+                                    </div>
+                                    <div style={{ fontWeight: 600, fontSize: '0.95rem', color: isMe ? 'var(--accent-text)' : 'var(--text-primary)' }}>{hw.title}</div>
+                                    <div style={{ fontSize: '0.8rem', opacity: 0.8, color: isMe ? 'var(--accent-text)' : 'var(--text-secondary)' }}>Due: {new Date(hw.dueDate).toLocaleDateString()}</div>
+                                    <CompletedByAvatars homeworkId={hw.id} allCompleted={allCompletedHomework} users={userList} />
+                                    <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: isMe ? 'var(--accent-text)' : 'var(--accent-color)', fontWeight: 600, textDecoration: 'underline' }}>Tap to view details</div>
+                                  </div>
                                 );
-                              })()}
+                              })() : msg.text}
                               {msg.isEdited && <span style={{ fontSize: '0.7rem', opacity: 0.6, marginLeft: '0.5rem' }}>({t('chat_edited_mark' as TranslationKey)})</span>}
                             </div>
                           </div>
@@ -1866,9 +1867,9 @@ export function Dashboard({ user }: DashboardProps) {
         <button onClick={() => { setActiveTab('chat'); if (activeChatId) setActiveChatId(null); }} style={navBtnStyle(activeTab === 'chat')}>
           <div style={{ position: 'relative' }}>
             <MessageSquare size={20} />
-            {Object.values(unreadCounts).reduce((a, b) => a + b, 0) > 0 && (
+            {Object.values(chatMetadata).reduce((a, b) => a + b.unreadCount, 0) > 0 && (
               <div style={{ position: 'absolute', top: '-4px', right: '-8px', background: 'var(--accent-color)', color: 'var(--accent-text)', fontSize: '0.65rem', fontWeight: 700, minWidth: '16px', height: '16px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 0.2rem', border: '2px solid var(--bg-secondary)' }}>
-                {Object.values(unreadCounts).reduce((a, b) => a + b, 0) > 99 ? '99+' : Object.values(unreadCounts).reduce((a, b) => a + b, 0)}
+                {Object.values(chatMetadata).reduce((a, b) => a + b.unreadCount, 0) > 99 ? '99+' : Object.values(chatMetadata).reduce((a, b) => a + b.unreadCount, 0)}
               </div>
             )}
           </div>
