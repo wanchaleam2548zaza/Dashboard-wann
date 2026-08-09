@@ -198,24 +198,18 @@ export function Dashboard({ user }: DashboardProps) {
         
         if (activeChatId !== 'global') {
           const recipientId = activeChatId.replace(user.uid, '').replace('_', '');
-          let displayMsg = msgText;
-          if (msgText.startsWith('[HW_SHARE:')) displayMsg = 'Sent a homework card';
-          
           if (recipientId) {
             setDoc(doc(db, `users/${recipientId}/chats`, activeChatId), {
               unreadCount: increment(1),
-              updatedAt: new Date().toISOString(),
-              lastMessage: displayMsg,
-              lastMessageTime: new Date().toISOString()
+              lastMessage: msgText,
+              updatedAt: new Date().toISOString()
+            }, { merge: true }).catch(console.error);
+            
+            setDoc(doc(db, `users/${user.uid}/chats`, activeChatId), {
+              lastMessage: msgText,
+              updatedAt: new Date().toISOString()
             }, { merge: true }).catch(console.error);
           }
-          
-          // Update own chat doc for last message
-          setDoc(doc(db, `users/${user.uid}/chats`, activeChatId), {
-            updatedAt: new Date().toISOString(),
-            lastMessage: displayMsg,
-            lastMessageTime: new Date().toISOString()
-          }, { merge: true }).catch(console.error);
         }
 
         setReplyingTo(null);
@@ -252,7 +246,7 @@ export function Dashboard({ user }: DashboardProps) {
     isOnline?: boolean;
   }
   const [userList, setUserList] = useState<UserListItem[]>([]);
-  const [chatMetadata, setChatMetadata] = useState<Record<string, {unreadCount: number, lastMessage?: string, lastMessageTime?: string}>>({});
+  const [chatMetadata, setChatMetadata] = useState<Record<string, { unreadCount: number, lastMessage?: string }>>({});
 
   // Change Password State
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -312,16 +306,14 @@ export function Dashboard({ user }: DashboardProps) {
   useEffect(() => {
     if (!user) return;
     const unsub = onSnapshot(collection(db, `users/${user.uid}/chats`), (snap) => {
-      const metadata: Record<string, {unreadCount: number, lastMessage?: string, lastMessageTime?: string}> = {};
+      const meta: Record<string, { unreadCount: number, lastMessage?: string }> = {};
       snap.forEach(d => {
-        const data = d.data();
-        metadata[d.id] = {
-          unreadCount: data.unreadCount || 0,
-          lastMessage: data.lastMessage,
-          lastMessageTime: data.lastMessageTime
+        meta[d.id] = {
+          unreadCount: d.data().unreadCount || 0,
+          lastMessage: d.data().lastMessage
         };
       });
-      setChatMetadata(metadata);
+      setChatMetadata(meta);
     });
     return () => unsub();
   }, [user.uid]);
