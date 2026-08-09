@@ -614,27 +614,43 @@ export function Dashboard({ user }: DashboardProps) {
             </div>
             
             {/* Today's Classes */}
-            <Card>
-              <h3 style={{ fontSize: '1.125rem', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Clock size={20} /> {t('home_todays_classes')} ({t(`day_${defaultDay}` as TranslationKey)})
+            <Card style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
+              <h3 style={{ fontSize: '1.125rem', margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
+                <Clock size={20} color="var(--accent-color)" /> {t('home_todays_classes')} ({t(`day_${defaultDay}` as TranslationKey)})
               </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              
+              <div style={{ 
+                  display: 'flex', flexDirection: 'column', 
+                  background: 'var(--bg-secondary)', 
+                  borderRadius: '12px', 
+                  border: '1px solid var(--border-color)',
+              }}>
                 {(!groupedSubjects[defaultDay] || groupedSubjects[defaultDay].length === 0) ? (
-                  <p style={{ textAlign: 'center', color: 'var(--text-secondary)', margin: '1rem 0' }}>{t('home_no_classes')}</p>
+                  <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '1.5rem' }}>{t('home_no_classes')}</p>
                 ) : (
-                  groupedSubjects[defaultDay].map((subject) => (
+                  groupedSubjects[defaultDay].map((subject, idx) => (
                     <div 
                       key={subject.id} 
                       onClick={() => { setSelectedSubject(subject); setActiveTab('subject-details'); }}
-                      style={{ padding: '0.75rem', background: 'var(--bg-secondary)', borderLeft: '4px solid var(--accent-color)', borderRadius: '0 var(--radius-md) var(--radius-md) 0', boxShadow: 'var(--shadow-sm)', cursor: 'pointer', transition: 'background-color 0.2s' }}
+                      style={{ 
+                        padding: '1rem', 
+                        cursor: 'pointer', 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        borderBottom: idx === groupedSubjects[defaultDay].length - 1 ? 'none' : '1px solid var(--border-color)',
+                        transition: 'background-color 0.2s' 
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-primary)'}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-                        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{subject.name}</span>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
-                          {subject.startTime} - {subject.endTime}
-                        </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.95rem' }}>{subject.name}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{subject.room}</span>
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{subject.room}</div>
+                      <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--accent-color)', background: 'var(--bg-primary)', padding: '0.35rem 0.75rem', borderRadius: '100px' }}>
+                        {subject.startTime} - {subject.endTime}
+                      </span>
                     </div>
                   ))
                 )}
@@ -642,28 +658,38 @@ export function Dashboard({ user }: DashboardProps) {
             </Card>
 
             {/* Homework List */}
-            <Card>
-              <h3 style={{ fontSize: '1.125rem', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <CheckSquare size={20} /> {t('home_homework')}
+            <Card style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
+              <h3 style={{ fontSize: '1.125rem', margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
+                <CheckSquare size={20} color="var(--accent-color)" /> {t('home_homework')}
               </h3>
 
-              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '0.5rem' }}>
+              <div style={{ 
+                display: 'flex', 
+                background: 'var(--bg-primary)', 
+                padding: '0.25rem', 
+                borderRadius: '8px', 
+                marginBottom: '1.25rem', 
+                overflowX: 'auto', 
+                scrollbarWidth: 'none',
+                gap: '0.25rem'
+              }}>
                 {(['new', 'pending', 'urgent', 'completed'] as const).map(tab => (
                   <button
                     key={tab}
                     onClick={() => setHomeHwTab(tab)}
                     style={{
-                      padding: '0.4rem 0.8rem',
-                      borderRadius: 'var(--radius-xl)',
+                      flex: 1,
+                      padding: '0.5rem',
+                      borderRadius: '6px',
                       border: 'none',
                       fontWeight: 600,
-                      fontSize: '0.8rem',
+                      fontSize: '0.85rem',
                       cursor: 'pointer',
                       whiteSpace: 'nowrap',
                       transition: 'all 0.2s',
-                      background: homeHwTab === tab ? 'var(--accent-color)' : 'var(--bg-secondary)',
-                      color: homeHwTab === tab ? 'var(--accent-text)' : 'var(--text-secondary)',
-                      boxShadow: homeHwTab === tab ? 'var(--shadow-sm)' : 'none',
+                      background: homeHwTab === tab ? 'var(--bg-secondary)' : 'transparent',
+                      color: homeHwTab === tab ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      boxShadow: homeHwTab === tab ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                     }}
                   >
                     {t(`hw_tab_${tab}` as TranslationKey)}
@@ -671,7 +697,13 @@ export function Dashboard({ user }: DashboardProps) {
                 ))}
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ 
+                  display: 'flex', flexDirection: 'column', 
+                  background: 'var(--bg-secondary)', 
+                  borderRadius: '12px', 
+                  border: '1px solid var(--border-color)',
+                  overflow: 'hidden'
+              }}>
                 {(() => {
                   const now = new Date();
                   now.setHours(0, 0, 0, 0);
@@ -694,23 +726,37 @@ export function Dashboard({ user }: DashboardProps) {
                   });
 
                   if (filteredHw.length === 0) {
-                    return <p style={{ textAlign: 'center', color: 'var(--text-secondary)', margin: '1rem 0' }}>{t('hw_no_homework_in_tab')}</p>;
+                    return <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '1.5rem' }}>{t('hw_no_homework_in_tab')}</p>;
                   }
                   
-                  return filteredHw.map(hw => {
+                  return filteredHw.map((hw, idx) => {
                     const subject = subjectList.find(s => s.id === hw.subjectId);
                     const isCompleted = completedHomeworkIds.has(hw.id);
                     return (
-                      <div key={hw.id} onClick={() => setSelectedHomework(hw)} style={{ padding: '0.75rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: '0.75rem', transition: 'background-color 0.2s' }}>
-                        <div style={{ marginTop: '0.1rem', color: isCompleted ? '#10b981' : 'var(--text-secondary)' }}>
-                           {isCompleted ? <CheckCircle2 size={20} /> : <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: '2px solid var(--text-secondary)' }} />}
+                      <div 
+                        key={hw.id} 
+                        onClick={() => setSelectedHomework(hw)} 
+                        style={{ 
+                          padding: '1rem', 
+                          cursor: 'pointer', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '1rem', 
+                          transition: 'background-color 0.2s',
+                          borderBottom: idx === filteredHw.length - 1 ? 'none' : '1px solid var(--border-color)'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-primary)'}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <div style={{ color: isCompleted ? '#34c759' : 'var(--text-secondary)', flexShrink: 0 }}>
+                           {isCompleted ? <CheckCircle2 size={24} /> : <div style={{ width: '22px', height: '22px', borderRadius: '50%', border: '2px solid var(--text-secondary)' }} />}
                         </div>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 600, marginBottom: '0.25rem', color: isCompleted ? 'var(--text-secondary)' : 'var(--text-primary)', textDecoration: isCompleted ? 'line-through' : 'none', fontSize: '0.875rem' }}>{hw.title}</div>
+                          <div style={{ fontWeight: 600, marginBottom: '0.25rem', color: isCompleted ? 'var(--text-secondary)' : 'var(--text-primary)', textDecoration: isCompleted ? 'line-through' : 'none', fontSize: '0.95rem' }}>{hw.title}</div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span>{subject ? subject.name : 'Unknown Subject'}</span>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.2rem 0.5rem', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-xl)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                              <Calendar size={12} /> Deadline: {new Date(hw.dueDate).toLocaleDateString()}
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontWeight: 500, color: isCompleted ? 'var(--text-secondary)' : '#ff3b30' }}>
+                              <Calendar size={12} /> {new Date(hw.dueDate).toLocaleDateString()}
                             </span>
                           </div>
                         </div>
@@ -762,21 +808,27 @@ export function Dashboard({ user }: DashboardProps) {
             </div>
 
             {/* Selected Day Timeline */}
-            <div style={{ position: 'relative', paddingLeft: '1.5rem', marginTop: '0.5rem' }}>
+            <div style={{ position: 'relative', paddingLeft: '1.5rem', marginTop: '1rem' }}>
               <div style={{ 
                 position: 'absolute', 
                 left: '7px', top: '0', bottom: '0', 
                 width: '2px', background: 'var(--border-color)', borderRadius: '2px'
               }} />
               
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{ 
+                display: 'flex', flexDirection: 'column', 
+                background: 'var(--bg-secondary)', 
+                borderRadius: '12px', 
+                border: '1px solid var(--border-color)',
+                overflow: 'hidden'
+              }}>
                 {(!groupedSubjects[selectedDay] || groupedSubjects[selectedDay].length === 0) ? (
-                   <p style={{ color: 'var(--text-secondary)', paddingLeft: '1rem' }}>{t('schedule_no_classes_on')} {t(`day_${selectedDay}` as TranslationKey)}.</p>
+                   <p style={{ color: 'var(--text-secondary)', padding: '1.5rem', textAlign: 'center' }}>{t('schedule_no_classes_on')} {t(`day_${selectedDay}` as TranslationKey)}.</p>
                 ) : (
-                  groupedSubjects[selectedDay].map((subject) => (
+                  groupedSubjects[selectedDay].map((subject, idx) => (
                     <div key={subject.id} style={{ position: 'relative' }}>
                       <div style={{
-                        position: 'absolute', left: '-1.5rem', top: '0.75rem', width: '10px', height: '10px',
+                        position: 'absolute', left: '-1.85rem', top: '1.25rem', width: '12px', height: '12px',
                         borderRadius: '50%', background: 'var(--accent-color)', border: '2px solid var(--bg-primary)',
                         boxShadow: '0 0 0 2px var(--border-color)', zIndex: 1
                       }} />
@@ -784,22 +836,24 @@ export function Dashboard({ user }: DashboardProps) {
                       <div 
                         onClick={() => { setSelectedSubject(subject); setActiveTab('subject-details'); }}
                         style={{ 
-                          padding: '1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', 
-                          borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', cursor: 'pointer',
-                          transition: 'all 0.2s ease'
-                        }}>
-                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '1rem', marginBottom: '0.5rem' }}>{subject.name}</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <Clock size={14} color="var(--accent-color)" />
-                            <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{subject.startTime} - {subject.endTime}</span>
+                          padding: '1.25rem 1rem', background: 'var(--bg-secondary)', 
+                          borderBottom: idx === groupedSubjects[selectedDay].length - 1 ? 'none' : '1px solid var(--border-color)', 
+                          cursor: 'pointer',
+                          transition: 'background-color 0.2s ease',
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-primary)'}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '1.05rem', marginBottom: '0.25rem' }}>{subject.name}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><UserIcon size={14} /> {subject.teacher}</span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><MapPin size={14} /> {subject.room}</span>
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <UserIcon size={14} /><span>{subject.teacher}</span>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <MapPin size={14} /><span>{subject.room}</span>
-                          </div>
+                        </div>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--accent-color)', background: 'var(--bg-primary)', padding: '0.4rem 0.75rem', borderRadius: '100px' }}>
+                          {subject.startTime}
                         </div>
                       </div>
                     </div>
@@ -819,19 +873,19 @@ export function Dashboard({ user }: DashboardProps) {
             </h2>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-              <Card style={{ padding: '1rem', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', fontWeight: 500 }}>{t('workload_total_assignments')}</div>
+              <Card style={{ padding: '1.5rem', background: 'linear-gradient(135deg, var(--bg-primary), var(--bg-secondary))', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('workload_total_assignments')}</div>
                 <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--text-primary)' }}>{totalHomework}</div>
               </Card>
-              <Card style={{ padding: '1rem', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', fontWeight: 500 }}>{t('workload_due_this_week')}</div>
+              <Card style={{ padding: '1.5rem', background: 'linear-gradient(135deg, var(--bg-primary), var(--bg-secondary))', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('workload_due_this_week')}</div>
                 <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--accent-color)' }}>{hwDueThisWeek}</div>
               </Card>
             </div>
 
             <Card style={{ padding: '1.5rem' }}>
-              <h3 style={{ fontSize: '1.125rem', margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <BookOpen size={20} /> {t('workload_homework_by_subject')}
+              <h3 style={{ fontSize: '1.125rem', margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
+                <BookOpen size={20} color="var(--accent-color)" /> {t('workload_homework_by_subject')}
               </h3>
 
               {subjectHwCounts.every(s => s.count === 0) ? (
@@ -839,22 +893,22 @@ export function Dashboard({ user }: DashboardProps) {
                   {t('workload_no_homework')}
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginTop: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                   {subjectHwCounts.map((subject) => {
                     const maxCount = Math.max(...subjectHwCounts.map(s => s.count));
                     const percentage = maxCount === 0 ? 0 : (subject.count / maxCount) * 100;
                     return (
-                      <div key={subject.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <div key={subject.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem' }}>
                           <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{subject.name}</span>
                           <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{subject.count} {t('workload_assignments')}</span>
                         </div>
-                        <div style={{ width: '100%', height: '8px', background: 'var(--bg-primary)', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                        <div style={{ width: '100%', height: '8px', background: 'var(--bg-secondary)', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
                           <div style={{ 
                             width: `${percentage}%`, 
                             height: '100%', 
                             background: 'var(--accent-color)', 
-                            borderRadius: '4px',
+                            borderRadius: '12px',
                             transition: 'width 0.5s ease-out'
                           }} />
                         </div>
@@ -866,12 +920,12 @@ export function Dashboard({ user }: DashboardProps) {
             </Card>
 
             {mostActiveSubject && (
-              <Card style={{ padding: '1.25rem', background: 'var(--bg-secondary)', border: '1px dashed var(--border-color)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Card style={{ padding: '1.25rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: 'var(--shadow-sm)' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Bell size={20} color="var(--accent-color)" />
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>{t('workload_heaviest_workload')}</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.15rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('workload_heaviest_workload')}</div>
                   <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{mostActiveSubject.name} ({mostActiveSubject.count} {t('workload_assignments')})</div>
                 </div>
               </Card>
@@ -888,14 +942,22 @@ export function Dashboard({ user }: DashboardProps) {
                 </h2>
                 <div 
                   onClick={() => setActiveChatId('global')}
-                  style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', cursor: 'pointer', marginBottom: '1rem' }}
+                  style={{ 
+                    display: 'flex', alignItems: 'center', gap: '1rem', 
+                    padding: '1rem', background: 'var(--bg-secondary)', 
+                    border: '1px solid var(--border-color)', borderRadius: '12px', 
+                    cursor: 'pointer', marginBottom: '1rem',
+                    transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
                 >
-                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--accent-color)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'var(--accent-color)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Globe size={24} color="#fff" />
                   </div>
-                  <div>
-                    <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{t('chat_global_room' as TranslationKey)}</div>
-                    <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Chat with everyone</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '1.05rem', marginBottom: '0.15rem' }}>{t('chat_global_room' as TranslationKey)}</div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Chat with everyone</div>
                   </div>
                 </div>
 
@@ -908,26 +970,45 @@ export function Dashboard({ user }: DashboardProps) {
                     <p style={{ color: 'var(--text-secondary)', margin: 0 }}>{t('friends_no_students' as TranslationKey)}</p>
                   </Card>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', overflowY: 'auto', paddingBottom: '2rem', scrollbarWidth: 'none' }}>
-                    {userList.map(u => {
+                  <div style={{ 
+                    display: 'flex', flexDirection: 'column', 
+                    background: 'var(--bg-secondary)', 
+                    borderRadius: '12px', 
+                    border: '1px solid var(--border-color)',
+                    overflow: 'hidden',
+                    marginBottom: '2rem'
+                  }}>
+                    {userList.map((u, idx) => {
                       const name = u.displayName || u.username || u.id;
                       const hasDisplayName = !!u.displayName && u.displayName !== u.username;
                       const chatId = [user.uid, u.id].sort().join('_');
                       const unread = unreadCounts[chatId] || 0;
                       return (
-                        <div key={u.id} onClick={() => startPrivateChat(u.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.875rem 1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', cursor: 'pointer' }}>
+                        <div 
+                          key={u.id} 
+                          onClick={() => startPrivateChat(u.id)} 
+                          style={{ 
+                            display: 'flex', alignItems: 'center', gap: '1rem', 
+                            padding: '0.875rem 1rem', 
+                            cursor: 'pointer',
+                            borderBottom: idx === userList.length - 1 ? 'none' : '1px solid var(--border-color)',
+                            transition: 'background-color 0.2s ease'
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-primary)'}
+                          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
                           <div style={{ position: 'relative', flexShrink: 0 }}>
-                            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--bg-primary)', border: '2px solid var(--border-color)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               {u.avatarUrl ? (
                                 <img src={u.avatarUrl} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               ) : (
-                                <UserCircle size={28} color="var(--text-secondary)" />
+                                <UserCircle size={26} color="var(--text-secondary)" />
                               )}
                             </div>
-                            <div style={{ position: 'absolute', bottom: '1px', right: '1px', width: '12px', height: '12px', borderRadius: '50%', background: u.isOnline ? 'var(--accent-color)' : 'var(--text-secondary)', border: '2px solid var(--bg-secondary)' }} />
+                            <div style={{ position: 'absolute', bottom: '0px', right: '0px', width: '12px', height: '12px', borderRadius: '50%', background: u.isOnline ? '#34c759' : 'var(--text-secondary)', border: '2px solid var(--bg-secondary)' }} />
                           </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                            <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.95rem' }}>
                               <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {name}
                                 {hasDisplayName && u.username && (
@@ -937,17 +1018,16 @@ export function Dashboard({ user }: DashboardProps) {
                                 )}
                               </span>
                               {unread > 0 && (
-                                <div style={{ background: 'var(--accent-color)', color: 'var(--accent-text)', fontSize: '0.75rem', fontWeight: 600, minWidth: '20px', height: '20px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 0.4rem', border: '2px solid var(--bg-secondary)', flexShrink: 0 }}>
+                                <div style={{ background: 'var(--accent-color)', color: 'var(--accent-text)', fontSize: '0.75rem', fontWeight: 600, minWidth: '20px', height: '20px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 0.4rem', flexShrink: 0 }}>
                                   {unread > 99 ? '99+' : unread}
                                 </div>
                               )}
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: u.isOnline ? 'var(--accent-color)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.1rem' }}>
-                              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: u.isOnline ? 'var(--accent-color)' : 'var(--text-secondary)' }} />
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                               {u.isOnline ? t('friends_status_online' as TranslationKey) : t('friends_status_offline' as TranslationKey)}
                             </div>
                           </div>
-                          <MessageSquare size={16} color="var(--accent-color)" />
+                          <MessageSquare size={18} color="var(--border-color)" />
                         </div>
                       );
                     })}
@@ -1139,22 +1219,22 @@ export function Dashboard({ user }: DashboardProps) {
               
               {/* Account Settings Section */}
               <div>
-                <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', marginLeft: '0.5rem', fontWeight: 600 }}>{t('profile_section_account')}</h3>
-                <Card style={{ padding: 0, overflow: 'hidden', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)' }}>
+                <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', marginLeft: '0.75rem', fontWeight: 600 }}>{t('profile_section_account')}</h3>
+                <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden' }}>
                   
                   {/* Display Name Item */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', borderBottom: '1px solid var(--border-color)' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-md)', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <Edit2 size={16} color="var(--accent-color)" />
                     </div>
                     {!editingDisplayName ? (
                       <>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-primary)' }}>{t('profile_display_name')}</div>
-                          <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</div>
+                          <div style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-primary)' }}>{t('profile_display_name')}</div>
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</div>
                         </div>
-                        <button onClick={() => { setEditingDisplayName(true); setDisplayNameInput(displayName); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '0.25rem' }}>
-                          <Edit2 size={16} />
+                        <button onClick={() => { setEditingDisplayName(true); setDisplayNameInput(displayName); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-color)', padding: '0.25rem' }}>
+                          <Edit2 size={18} />
                         </button>
                       </>
                     ) : (
@@ -1166,7 +1246,7 @@ export function Dashboard({ user }: DashboardProps) {
                           className="input-field"
                           placeholder={t('profile_enter_name')}
                           maxLength={30}
-                          style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                          style={{ padding: '0.5rem', borderRadius: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
                         />
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                           <button disabled={savingDisplayName || !displayNameInput.trim()} onClick={async () => {
@@ -1177,10 +1257,10 @@ export function Dashboard({ user }: DashboardProps) {
                               setEditingDisplayName(false);
                             } catch (err: any) { alert(`Failed to save: ${err.message}`); }
                             finally { setSavingDisplayName(false); }
-                          }} className="btn btn-primary" style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem' }}>
+                          }} className="btn btn-primary" style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem', borderRadius: '8px' }}>
                             {savingDisplayName ? '...' : <><Check size={14} /> {t('profile_save')}</>}
                           </button>
-                          <button onClick={() => setEditingDisplayName(false)} style={{ padding: '0.4rem 0.75rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.8rem' }}>{t('profile_cancel')}</button>
+                          <button onClick={() => setEditingDisplayName(false)} style={{ padding: '0.4rem 0.75rem', borderRadius: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.8rem' }}>{t('profile_cancel')}</button>
                         </div>
                       </div>
                     )}
@@ -1189,88 +1269,88 @@ export function Dashboard({ user }: DashboardProps) {
                   {/* Language Item */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-md)', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Globe size={16} color="var(--accent-color)" />
                       </div>
-                      <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>{t('profile_language')}</span>
+                      <span style={{ fontSize: '0.95rem', fontWeight: 500 }}>{t('profile_language')}</span>
                     </div>
                     <select
                       value={language}
                       onChange={(e) => setLanguage(e.target.value as 'en' | 'th' | 'zh')}
-                      style={{ padding: '0.3rem 0.5rem', borderRadius: 'var(--radius-md)', border: 'none', background: 'transparent', color: 'var(--text-secondary)', outline: 'none', cursor: 'pointer', fontSize: '0.875rem', textAlign: 'right', direction: 'rtl' }}
+                      style={{ padding: '0.3rem 0.5rem', borderRadius: '8px', border: 'none', background: 'transparent', color: 'var(--text-secondary)', outline: 'none', cursor: 'pointer', fontSize: '0.95rem', textAlign: 'right', direction: 'rtl' }}
                     >
                       <option value="th">ไทย</option>
                       <option value="zh">中文</option>
                       <option value="en">English</option>
                     </select>
                   </div>
-                </Card>
+                </div>
               </div>
 
               {/* Security Section */}
               <div>
-                <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', marginLeft: '0.5rem', fontWeight: 600 }}>{t('profile_section_security')}</h3>
+                <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', marginLeft: '0.75rem', fontWeight: 600 }}>{t('profile_section_security')}</h3>
                 {!showChangePassword ? (
-                  <Card style={{ width: '100%', padding: '1rem', background: 'var(--bg-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} onClick={() => setShowChangePassword(true)}>
+                  <div style={{ width: '100%', padding: '1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} onClick={() => setShowChangePassword(true)}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-md)', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Lock size={16} color="var(--accent-color)" />
+                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255, 59, 48, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Lock size={16} color="#ff3b30" />
                       </div>
-                      <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>{t('profile_change_password')}</span>
+                      <span style={{ fontSize: '0.95rem', fontWeight: 500 }}>{t('profile_change_password')}</span>
                     </div>
-                    <ArrowLeft size={16} color="var(--text-secondary)" style={{ transform: 'rotate(180deg)' }} />
-                  </Card>
+                    <ArrowLeft size={18} color="var(--text-secondary)" style={{ transform: 'rotate(180deg)' }} />
+                  </div>
                 ) : (
-                  <Card style={{ width: '100%', padding: '1rem', background: 'var(--bg-secondary)' }}>
+                  <div style={{ width: '100%', padding: '1.25rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
                       <button onClick={() => { setShowChangePassword(false); setPwMessage(null); setOldPassword(''); setNewPassword(''); setConfirmPassword(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
-                        <ArrowLeft size={18} />
+                        <ArrowLeft size={20} />
                       </button>
-                      <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <Lock size={14} color="var(--accent-color)" /> {t('profile_change_password')}
+                      <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Lock size={16} color="#ff3b30" /> {t('profile_change_password')}
                       </h3>
                     </div>
 
-                    <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                       <div className="input-group">
-                        <label className="input-label" style={{ fontSize: '0.7rem' }}>{t('profile_old_password')}</label>
+                        <label className="input-label" style={{ fontSize: '0.8rem' }}>{t('profile_old_password')}</label>
                         <div style={{ position: 'relative' }}>
-                          <input type={showOldPw ? 'text' : 'password'} required value={oldPassword} onChange={e => setOldPassword(e.target.value)} className="input-field" placeholder="Enter old password" style={{ padding: '0.5rem', paddingRight: '2.5rem', fontSize: '0.875rem' }} />
+                          <input type={showOldPw ? 'text' : 'password'} required value={oldPassword} onChange={e => setOldPassword(e.target.value)} className="input-field" placeholder="Enter old password" style={{ padding: '0.6rem', paddingRight: '2.5rem', fontSize: '0.9rem', borderRadius: '8px', background: 'var(--bg-primary)' }} />
                           <button type="button" onClick={() => setShowOldPw(p => !p)} style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                            {showOldPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                            {showOldPw ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
                         </div>
                       </div>
                       <div className="input-group">
-                        <label className="input-label" style={{ fontSize: '0.7rem' }}>{t('profile_new_password')}</label>
+                        <label className="input-label" style={{ fontSize: '0.8rem' }}>{t('profile_new_password')}</label>
                         <div style={{ position: 'relative' }}>
-                          <input type={showNewPw ? 'text' : 'password'} required value={newPassword} onChange={e => setNewPassword(e.target.value)} className="input-field" placeholder="At least 6 characters" style={{ padding: '0.5rem', paddingRight: '2.5rem', fontSize: '0.875rem' }} />
+                          <input type={showNewPw ? 'text' : 'password'} required value={newPassword} onChange={e => setNewPassword(e.target.value)} className="input-field" placeholder="At least 6 characters" style={{ padding: '0.6rem', paddingRight: '2.5rem', fontSize: '0.9rem', borderRadius: '8px', background: 'var(--bg-primary)' }} />
                           <button type="button" onClick={() => setShowNewPw(p => !p)} style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                            {showNewPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                            {showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
                         </div>
                       </div>
                       <div className="input-group">
-                        <label className="input-label" style={{ fontSize: '0.7rem' }}>{t('profile_confirm_password')}</label>
+                        <label className="input-label" style={{ fontSize: '0.8rem' }}>{t('profile_confirm_password')}</label>
                         <div style={{ position: 'relative' }}>
-                          <input type={showConfirmPw ? 'text' : 'password'} required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="input-field" placeholder="Repeat new password" style={{ padding: '0.5rem', paddingRight: '2.5rem', fontSize: '0.875rem' }} />
+                          <input type={showConfirmPw ? 'text' : 'password'} required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="input-field" placeholder="Repeat new password" style={{ padding: '0.6rem', paddingRight: '2.5rem', fontSize: '0.9rem', borderRadius: '8px', background: 'var(--bg-primary)' }} />
                           <button type="button" onClick={() => setShowConfirmPw(p => !p)} style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                            {showConfirmPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                            {showConfirmPw ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
                         </div>
                       </div>
 
                       {pwMessage && (
-                        <div style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)', background: pwMessage.type === 'success' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${pwMessage.type === 'success' ? '#10b981' : '#ef4444'}`, color: pwMessage.type === 'success' ? '#10b981' : '#ef4444', fontSize: '0.75rem' }}>
+                        <div style={{ padding: '0.5rem', borderRadius: '8px', background: pwMessage.type === 'success' ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 59, 48, 0.1)', border: `1px solid ${pwMessage.type === 'success' ? '#34c759' : '#ff3b30'}`, color: pwMessage.type === 'success' ? '#34c759' : '#ff3b30', fontSize: '0.8rem' }}>
                           {pwMessage.text}
                         </div>
                       )}
 
-                      <Button type="submit" variant="primary" isLoading={pwLoading} style={{ marginTop: '0.25rem', padding: '0.5rem', fontSize: '0.875rem', justifyContent: 'center' }}>
+                      <Button type="submit" variant="primary" isLoading={pwLoading} style={{ marginTop: '0.5rem', padding: '0.75rem', fontSize: '0.95rem', justifyContent: 'center', borderRadius: '8px' }}>
                         {t('profile_save')}
                       </Button>
                     </form>
-                  </Card>
+                  </div>
                 )}
               </div>
             </div>
@@ -1334,54 +1414,66 @@ export function Dashboard({ user }: DashboardProps) {
               
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                  <h3 style={{ fontSize: '1.125rem', margin: '0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Clock size={18} /> {t('schedule_your_suggestions')}
+                  <h3 style={{ fontSize: '1.125rem', margin: '0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
+                    <Clock size={18} color="var(--accent-color)" /> {t('schedule_your_suggestions')}
                   </h3>
-                  {subjectRequests.map(req => (
-                    <div key={req.id} style={{ padding: '1rem', background: 'var(--bg-primary)', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{req.title}</div>
-                        <div style={{ 
-                          fontSize: '0.75rem', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-xl)',
-                          background: req.status === 'pending' ? '#f59e0b20' : req.status === 'approved' ? '#10b98120' : '#ef444420',
-                          color: req.status === 'pending' ? '#f59e0b' : req.status === 'approved' ? '#10b981' : '#ef4444',
-                          textTransform: 'capitalize'
-                        }}>
-                          {req.status}
+                  <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden' }}>
+                    {subjectRequests.map((req, idx) => (
+                      <div key={req.id} style={{ padding: '1rem', borderBottom: idx === subjectRequests.length - 1 ? 'none' : '1px solid var(--border-color)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.95rem' }}>{req.title}</div>
+                          <div style={{ 
+                            fontSize: '0.75rem', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '100px',
+                            background: req.status === 'pending' ? 'rgba(255, 149, 0, 0.1)' : req.status === 'approved' ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 59, 48, 0.1)',
+                            color: req.status === 'pending' ? '#ff9500' : req.status === 'approved' ? '#34c759' : '#ff3b30',
+                            textTransform: 'capitalize'
+                          }}>
+                            {req.status}
+                          </div>
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <Calendar size={12} /> Due: {new Date(req.dueDate).toLocaleDateString()}
                         </div>
                       </div>
-                      <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                        Due: {new Date(req.dueDate).toLocaleDateString()}
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               );
             })()}
 
-            <div>
-              <h3 style={{ fontSize: '1.125rem', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <CheckSquare size={20} /> {t('subject_homework')}
+            <div style={{ paddingBottom: '2rem' }}>
+              <h3 style={{ fontSize: '1.125rem', margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
+                <CheckSquare size={20} color="var(--accent-color)" /> {t('subject_homework')}
               </h3>
 
               {/* Tabs */}
-              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '0.5rem' }}>
+              <div style={{ 
+                display: 'flex', 
+                background: 'var(--bg-primary)', 
+                padding: '0.25rem', 
+                borderRadius: '8px', 
+                marginBottom: '1.25rem', 
+                overflowX: 'auto', 
+                scrollbarWidth: 'none',
+                gap: '0.25rem'
+              }}>
                 {(['new', 'urgent', 'overdue', 'completed'] as const).map(tab => (
                   <button
                     key={tab}
                     onClick={() => setSubjectHwTab(tab)}
                     style={{
-                      padding: '0.4rem 0.8rem',
-                      borderRadius: 'var(--radius-xl)',
+                      flex: 1,
+                      padding: '0.5rem',
+                      borderRadius: '6px',
                       border: 'none',
                       fontWeight: 600,
-                      fontSize: '0.8rem',
+                      fontSize: '0.85rem',
                       cursor: 'pointer',
                       whiteSpace: 'nowrap',
                       transition: 'all 0.2s',
-                      background: subjectHwTab === tab ? 'var(--accent-color)' : 'var(--bg-secondary)',
-                      color: subjectHwTab === tab ? 'var(--accent-text)' : 'var(--text-secondary)',
-                      boxShadow: subjectHwTab === tab ? 'var(--shadow-sm)' : 'none',
+                      background: subjectHwTab === tab ? 'var(--bg-secondary)' : 'transparent',
+                      color: subjectHwTab === tab ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      boxShadow: subjectHwTab === tab ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                     }}
                   >
                     {t(`hw_tab_${tab}` as TranslationKey)}
@@ -1420,17 +1512,34 @@ export function Dashboard({ user }: DashboardProps) {
                   );
                 }
                 return (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {filteredHw.map(hw => {
+                  <div style={{ 
+                      display: 'flex', flexDirection: 'column', 
+                      background: 'var(--bg-secondary)', 
+                      borderRadius: '12px', 
+                      border: '1px solid var(--border-color)',
+                      overflow: 'hidden'
+                  }}>
+                    {filteredHw.map((hw, idx) => {
                       const isCompleted = completedHomeworkIds.has(hw.id);
                       return (
-                        <div key={hw.id} onClick={() => setSelectedHomework(hw)} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', cursor: 'pointer', transition: 'background-color 0.2s' }}>
-                          <div style={{ marginTop: '0.1rem', color: isCompleted ? '#10b981' : 'var(--text-secondary)' }}>
-                            {isCompleted ? <CheckCircle2 size={20} /> : <div style={{ width: '18px', height: '18px', margin: '1px', borderRadius: '50%', border: '2px solid var(--text-secondary)' }} />}
+                        <div 
+                          key={hw.id} 
+                          onClick={() => setSelectedHomework(hw)} 
+                          style={{ 
+                            display: 'flex', alignItems: 'flex-start', gap: '1rem', 
+                            padding: '1rem', 
+                            cursor: 'pointer', transition: 'background-color 0.2s',
+                            borderBottom: idx === filteredHw.length - 1 ? 'none' : '1px solid var(--border-color)'
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-primary)'}
+                          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <div style={{ marginTop: '0.1rem', color: isCompleted ? '#34c759' : 'var(--text-secondary)', flexShrink: 0 }}>
+                            {isCompleted ? <CheckCircle2 size={24} /> : <div style={{ width: '22px', height: '22px', margin: '1px', borderRadius: '50%', border: '2px solid var(--text-secondary)' }} />}
                           </div>
                           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                            <span style={{ color: isCompleted ? 'var(--text-secondary)' : 'var(--text-primary)', textDecoration: isCompleted ? 'line-through' : 'none', fontWeight: 600, fontSize: '1rem' }}>{hw.title}</span> 
-                            <span style={{ display: 'inline-flex', alignSelf: 'flex-start', alignItems: 'center', padding: '0.2rem 0.5rem', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-xl)', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                            <span style={{ color: isCompleted ? 'var(--text-secondary)' : 'var(--text-primary)', textDecoration: isCompleted ? 'line-through' : 'none', fontWeight: 600, fontSize: '0.95rem' }}>{hw.title}</span> 
+                            <span style={{ display: 'inline-flex', alignSelf: 'flex-start', alignItems: 'center', padding: '0.2rem 0.5rem', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '100px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
                               <Calendar size={12} style={{marginRight: '0.2rem'}} /> Deadline: {new Date(hw.dueDate).toLocaleDateString()}
                             </span>
                           </div>
