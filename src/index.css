@@ -41,7 +41,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg-primary: var(--color-system-bg-dark);
     --bg-secondary: var(--color-system-card-dark);
     --text-primary: var(--color-system-text-dark);
@@ -51,6 +51,28 @@
     --accent-color: var(--color-ios-blue-dark);
     --accent-text: var(--color-white);
   }
+}
+
+:root[data-theme="dark"] {
+  --bg-primary: var(--color-system-bg-dark);
+  --bg-secondary: var(--color-system-card-dark);
+  --text-primary: var(--color-system-text-dark);
+  --text-secondary: var(--color-system-text-sec-dark);
+  --border-color: var(--color-system-border-dark);
+  --focus-ring: var(--color-ios-blue-dark);
+  --accent-color: var(--color-ios-blue-dark);
+  --accent-text: var(--color-white);
+}
+
+:root[data-theme="light"] {
+  --bg-primary: var(--color-system-bg-light);
+  --bg-secondary: var(--color-system-card-light);
+  --text-primary: var(--color-system-text-light);
+  --text-secondary: var(--color-system-text-sec-light);
+  --border-color: var(--color-system-border-light);
+  --focus-ring: var(--color-ios-blue);
+  --accent-color: var(--color-ios-blue);
+  --accent-text: var(--color-white);
 }
 
 * {

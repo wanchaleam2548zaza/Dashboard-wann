@@ -61,6 +61,19 @@ export interface MessageData {
 
 export function Dashboard({ user }: DashboardProps) {
   const { t, language, setLanguage } = useLanguage();
+  const [theme, setTheme] = useState<'system' | 'light' | 'dark'>(() => {
+    return (localStorage.getItem('dashboard_theme') as any) || 'system';
+  });
+
+  useEffect(() => {
+    if (theme === 'system') {
+      document.documentElement.removeAttribute('data-theme');
+    } else {
+      document.documentElement.setAttribute('data-theme', theme);
+    }
+    localStorage.setItem('dashboard_theme', theme);
+  }, [theme]);
+
   const [loading, setLoading] = useState(false);
   const [subjectList, setSubjectList] = useState<SubjectData[]>([]);
   const [homeworkList, setHomeworkList] = useState<HomeworkData[]>([]);
@@ -948,8 +961,8 @@ export function Dashboard({ user }: DashboardProps) {
                 </h2>
 
                 {/* Active Now (Horizontal Scroll) */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0.5rem', fontWeight: 600 }}>Active Now</h3>
+                <div style={{ padding: '0.5rem 0' }}>
+                  <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0.5rem', fontWeight: 600 }}>{t('chat_active_now' as TranslationKey)}</h3>
                   <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', padding: '0.5rem', margin: '0 -0.5rem', scrollbarWidth: 'none' }}>
                     {userList.filter(u => u.isOnline).map(u => (
                       <div key={u.id} onClick={() => startPrivateChat(u.id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', cursor: 'pointer', flexShrink: 0 }}>
@@ -973,8 +986,8 @@ export function Dashboard({ user }: DashboardProps) {
                 </div>
 
                 {/* Combined Chat List (Global + Friends) */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0.5rem', fontWeight: 600 }}>Messages</h3>
+                <div style={{ flex: 1, padding: '0.5rem 0' }}>
+                  <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0.5rem', fontWeight: 600 }}>{t('chat_messages' as TranslationKey)}</h3>
                   
                   <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--bg-secondary)', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
                     
@@ -1302,6 +1315,25 @@ export function Dashboard({ user }: DashboardProps) {
                       <option value="th">ไทย</option>
                       <option value="zh">中文</option>
                       <option value="en">English</option>
+                    </select>
+                  </div>
+
+                  {/* Theme Item */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', borderTop: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Eye size={16} color="var(--accent-color)" />
+                      </div>
+                      <span style={{ fontSize: '0.95rem', fontWeight: 500 }}>{t('profile_theme')}</span>
+                    </div>
+                    <select
+                      value={theme}
+                      onChange={(e) => setTheme(e.target.value as 'system' | 'light' | 'dark')}
+                      style={{ padding: '0.3rem 0.5rem', borderRadius: '8px', border: 'none', background: 'transparent', color: 'var(--text-secondary)', outline: 'none', cursor: 'pointer', fontSize: '0.95rem', textAlign: 'right', direction: 'rtl' }}
+                    >
+                      <option value="system">{t('profile_theme_system')}</option>
+                      <option value="light">{t('profile_theme_light')}</option>
+                      <option value="dark">{t('profile_theme_dark')}</option>
                     </select>
                   </div>
                 </div>

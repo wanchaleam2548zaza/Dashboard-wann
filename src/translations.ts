@@ -22,6 +22,8 @@ export const translations = {
     chat_editing: "Editing message...",
     chat_replying_to: "Replying to",
     chat_edited_mark: "(edited)",
+    chat_active_now: "Active Now",
+    chat_messages: "Messages",
 
 
     // Friends Tab
@@ -101,6 +103,10 @@ export const translations = {
     profile_new_password: "New Password",
     profile_confirm_password: "Confirm New Password",
     profile_language: "Language",
+    profile_theme: "Theme",
+    profile_theme_light: "Light",
+    profile_theme_dark: "Dark",
+    profile_theme_system: "System",
     profile_sign_out: "Sign Out",
   },
   th: {
@@ -126,6 +132,8 @@ export const translations = {
     chat_editing: "กำลังแก้ไขข้อความ...",
     chat_replying_to: "ตอบกลับ",
     chat_edited_mark: "(แก้ไขแล้ว)",
+    chat_active_now: "กำลังใช้งาน",
+    chat_messages: "ข้อความ",
 
 
     // Friends Tab
@@ -205,6 +213,10 @@ export const translations = {
     profile_new_password: "รหัสผ่านใหม่",
     profile_confirm_password: "ยืนยันรหัสผ่านใหม่",
     profile_language: "ภาษา (Language)",
+    profile_theme: "ธีม",
+    profile_theme_light: "สว่าง",
+    profile_theme_dark: "มืด",
+    profile_theme_system: "ตามระบบ",
     profile_sign_out: "ออกจากระบบ",
   },
   zh: {
@@ -230,6 +242,8 @@ export const translations = {
     chat_editing: "编辑消息...",
     chat_replying_to: "回复给",
     chat_edited_mark: "(已编辑)",
+    chat_active_now: "当前在线",
+    chat_messages: "消息",
 
 
     // Friends Tab
@@ -309,6 +323,10 @@ export const translations = {
     profile_new_password: "新密码",
     profile_confirm_password: "确认新密码",
     profile_language: "语言 (Language)",
+    profile_theme: "主题",
+    profile_theme_light: "浅色",
+    profile_theme_dark: "深色",
+    profile_theme_system: "跟随系统",
     profile_sign_out: "退出登录",
   }
 };
