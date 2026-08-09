@@ -613,49 +613,76 @@ export function Dashboard({ user }: DashboardProps) {
               <p style={{ color: 'var(--text-secondary)' }}>{user.email?.replace('@dashboard.com', '')}</p>
             </div>
             
-            {/* Today's Classes */}
-            <Card style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
-              <h3 style={{ fontSize: '1.125rem', margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
-                <Clock size={20} color="var(--accent-color)" /> {t('home_todays_classes')} ({t(`day_${defaultDay}` as TranslationKey)})
-              </h3>
+            {/* Summary Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <Card style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderTop: '4px solid var(--accent-color)' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('home_todays_classes')}</span>
+                <span style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {groupedSubjects[defaultDay]?.length || 0}
+                </span>
+              </Card>
+              <Card style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderTop: '4px solid #ff3b30' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pending HW</span>
+                <span style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {homeworkList.filter(hw => !completedHomeworkIds.has(hw.id)).length}
+                </span>
+              </Card>
+            </div>
+
+            {/* Today's Classes - Horizontal Scroll */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '1rem' }}>
+                <h3 style={{ fontSize: '1.125rem', margin: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Clock size={18} color="var(--accent-color)" /> {t('home_todays_classes')} ({t(`day_${defaultDay}` as TranslationKey)})
+                </h3>
+              </div>
               
               <div style={{ 
-                  display: 'flex', flexDirection: 'column', 
-                  background: 'var(--bg-secondary)', 
-                  borderRadius: '12px', 
-                  border: '1px solid var(--border-color)',
+                display: 'flex', 
+                gap: '1rem', 
+                overflowX: 'auto', 
+                paddingBottom: '1rem',
+                margin: '0 -1rem',
+                padding: '0.25rem 1rem 1rem 1rem',
+                scrollbarWidth: 'none',
               }}>
                 {(!groupedSubjects[defaultDay] || groupedSubjects[defaultDay].length === 0) ? (
-                  <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '1.5rem' }}>{t('home_no_classes')}</p>
+                  <Card style={{ flex: '0 0 100%', padding: '2rem', textAlign: 'center', background: 'var(--bg-secondary)' }}>
+                    <p style={{ color: 'var(--text-secondary)', margin: 0 }}>{t('home_no_classes')}</p>
+                  </Card>
                 ) : (
-                  groupedSubjects[defaultDay].map((subject, idx) => (
-                    <div 
+                  groupedSubjects[defaultDay].map((subject) => (
+                    <Card 
                       key={subject.id} 
                       onClick={() => { setSelectedSubject(subject); setActiveTab('subject-details'); }}
                       style={{ 
-                        padding: '1rem', 
+                        flex: '0 0 240px',
+                        padding: '1.25rem', 
                         cursor: 'pointer', 
                         display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        borderBottom: idx === groupedSubjects[defaultDay].length - 1 ? 'none' : '1px solid var(--border-color)',
-                        transition: 'background-color 0.2s' 
+                        flexDirection: 'column',
+                        gap: '0.75rem',
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--border-color)',
+                        transition: 'transform 0.2s, box-shadow 0.2s',
                       }}
-                      onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-primary)'}
-                      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
                     >
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                        <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.95rem' }}>{subject.name}</span>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{subject.room}</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '1rem', lineHeight: '1.2', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{subject.name}</span>
+                        <div style={{ background: 'rgba(0, 122, 255, 0.1)', color: 'var(--accent-color)', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, flexShrink: 0 }}>
+                          {subject.room}
+                        </div>
                       </div>
-                      <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--accent-color)', background: 'var(--bg-primary)', padding: '0.35rem 0.75rem', borderRadius: '100px' }}>
-                        {subject.startTime} - {subject.endTime}
-                      </span>
-                    </div>
+                      <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 500 }}>
+                        <Clock size={14} /> {subject.startTime} - {subject.endTime}
+                      </div>
+                    </Card>
                   ))
                 )}
               </div>
-            </Card>
+            </div>
 
             {/* Homework List */}
             <Card style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
@@ -726,7 +753,7 @@ export function Dashboard({ user }: DashboardProps) {
                   });
 
                   if (filteredHw.length === 0) {
-                    return <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '1.5rem' }}>{t('hw_no_homework_in_tab')}</p>;
+                    return <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '1.5rem', margin: 0 }}>{t('hw_no_homework_in_tab')}</p>;
                   }
                   
                   return filteredHw.map((hw, idx) => {
