@@ -106,6 +106,8 @@ export function Dashboard({ user }: DashboardProps) {
   const [displayNameInput, setDisplayNameInput] = useState('');
   const [savingDisplayName, setSavingDisplayName] = useState(false);
 
+  const [canAddHomework, setCanAddHomework] = useState(false);
+
   // Chat State
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<MessageData[]>([]);
@@ -254,6 +256,7 @@ export function Dashboard({ user }: DashboardProps) {
         // Only update input if we aren't currently editing it
         setDisplayName(dn);
         setDisplayNameInput(prev => editingDisplayName ? prev : dn);
+        setCanAddHomework(!!data.canAddHomework);
       }
       setProfileLoading(false);
     }, (err) => {
@@ -483,23 +486,33 @@ export function Dashboard({ user }: DashboardProps) {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await addDoc(collection(db, 'homeworkRequests'), {
-        title: suggestTitle,
-        subjectId: suggestSubject,
-        dueDate: suggestDueDate,
-        userId: user.uid,
-        username: user.email?.replace('@dashboard.com', '') || 'Unknown',
-        status: 'pending',
-        createdAt: new Date().toISOString()
-      });
+      if (canAddHomework) {
+        await addDoc(collection(db, 'homework'), {
+          title: suggestTitle,
+          subjectId: suggestSubject,
+          dueDate: suggestDueDate,
+          createdAt: new Date().toISOString()
+        });
+        alert('Homework added successfully!');
+      } else {
+        await addDoc(collection(db, 'homeworkRequests'), {
+          title: suggestTitle,
+          subjectId: suggestSubject,
+          dueDate: suggestDueDate,
+          userId: user.uid,
+          username: user.email?.replace('@dashboard.com', '') || 'Unknown',
+          status: 'pending',
+          createdAt: new Date().toISOString()
+        });
+        alert('Homework suggestion submitted for approval!');
+      }
       setSuggestTitle('');
       setSuggestSubject('');
       setSuggestDueDate('');
       setShowSuggestForm(false);
-      alert('Homework suggestion submitted for approval!');
     } catch (err) {
       console.error(err);
-      alert('Failed to submit suggestion.');
+      alert('Failed to submit.');
     } finally {
       setIsSubmitting(false);
     }
@@ -1310,7 +1323,7 @@ export function Dashboard({ user }: DashboardProps) {
                   setSuggestSubject(selectedSubject.id);
                   setShowSuggestForm(true);
                 }} style={{ width: '100%', padding: '0.4rem', fontSize: '0.875rem' }}>
-                  <PlusCircle size={14} style={{ marginRight: '0.25rem' }} /> {t('suggest_homework')}
+                  <PlusCircle size={14} style={{ marginRight: '0.25rem' }} /> {canAddHomework ? t('add_homework' as TranslationKey) : t('suggest_homework')}
                 </Button>
               </div>
             </Card>

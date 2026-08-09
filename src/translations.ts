@@ -43,6 +43,7 @@ export const translations = {
     hw_tab_overdue: "Overdue",
     hw_tab_completed: "Completed",
     hw_no_homework_in_tab: "No homework in this category. 🎉",
+    add_homework: "Add Homework",
 
     // Forms
     form_title_label: "Title",
@@ -146,6 +147,7 @@ export const translations = {
     hw_tab_overdue: "เลยกำหนด",
     hw_tab_completed: "เสร็จแล้ว",
     hw_no_homework_in_tab: "ไม่มีการบ้านในหมวดหมู่นี้ 🎉",
+    add_homework: "เพิ่มการบ้าน",
 
     // Forms
     form_title_label: "หัวข้อ",
@@ -249,6 +251,7 @@ export const translations = {
     hw_tab_overdue: "已逾期",
     hw_tab_completed: "已完成",
     hw_no_homework_in_tab: "此类别没有作业。 🎉",
+    add_homework: "添加作业",
 
     // Forms
     form_title_label: "标题",

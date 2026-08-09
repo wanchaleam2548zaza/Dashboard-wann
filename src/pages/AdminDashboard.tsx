@@ -15,6 +15,7 @@ interface UserData {
   username: string;
   isOnline: boolean;
   createdAt: string;
+  canAddHomework?: boolean;
 }
 
 interface SubjectData {
@@ -516,53 +517,103 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
           )}
 
           {activeTab === 'users' && (
-            <Card style={{ width: '100%', maxWidth: '500px' }} className="animate-fade-in">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-                <PlusCircle size={24} />
-                <h3 style={{ fontSize: '1.25rem', margin: 0 }}>Create New User</h3>
-              </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%', maxWidth: '800px' }} className="animate-fade-in">
+              <Card>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                  <PlusCircle size={24} />
+                  <h3 style={{ fontSize: '1.25rem', margin: 0 }}>Create New User</h3>
+                </div>
 
-              <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
-                Create a new user account. The user will be able to log in using the username and password you set here.
-              </p>
+                <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
+                  Create a new user account. The user will be able to log in using the username and password you set here.
+                </p>
 
-              <form onSubmit={handleCreateUser} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <Input
-                  label="Username"
-                  type="text"
-                  placeholder="Enter username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                />
+                <form onSubmit={handleCreateUser} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <Input
+                    label="Username"
+                    type="text"
+                    placeholder="Enter username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                  />
 
-                <Input
-                  label="Password"
-                  type="password"
-                  placeholder="Set a password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                />
+                  <Input
+                    label="Password"
+                    type="password"
+                    placeholder="Set a password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
+                  />
 
-                {message && (
-                  <div style={{
-                    color: message.type === 'error' ? '#ef4444' : '#10b981',
-                    fontSize: '0.875rem',
-                    padding: '0.75rem',
-                    backgroundColor: message.type === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                    borderRadius: 'var(--radius-md)'
-                  }}>
-                    {message.text}
-                  </div>
-                )}
+                  {message && (
+                    <div style={{
+                      color: message.type === 'error' ? '#ef4444' : '#10b981',
+                      fontSize: '0.875rem',
+                      padding: '0.75rem',
+                      backgroundColor: message.type === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                      borderRadius: 'var(--radius-md)'
+                    }}>
+                      {message.text}
+                    </div>
+                  )}
 
-                <Button type="submit" isLoading={loading} style={{ marginTop: '0.5rem' }}>
-                  Create Account
-                </Button>
-              </form>
-            </Card>
+                  <Button type="submit" isLoading={loading} style={{ marginTop: '0.5rem' }}>
+                    Create Account
+                  </Button>
+                </form>
+              </Card>
+
+              <Card>
+                <h3 style={{ fontSize: '1.25rem', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Users size={24} /> Manage Users
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '400px', overflowY: 'auto' }}>
+                  {userList.map(user => (
+                    <div key={user.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+                      <div>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{user.username}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Status: {user.isOnline ? 'Online' : 'Offline'}</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Can add homework directly</span>
+                        <label style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={!!user.canAddHomework} 
+                            onChange={async (e) => {
+                              try {
+                                await updateDoc(doc(db, 'users', user.id), {
+                                  canAddHomework: e.target.checked
+                                });
+                              } catch (err) {
+                                alert("Error updating user permission");
+                              }
+                            }}
+                            style={{ opacity: 0, width: 0, height: 0 }} 
+                          />
+                          <span style={{ 
+                            position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0, 
+                            backgroundColor: user.canAddHomework ? '#10b981' : 'var(--bg-primary)', 
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '24px', transition: '.4s' 
+                          }}>
+                            <span style={{ 
+                              position: 'absolute', content: '""', height: '18px', width: '18px', 
+                              left: user.canAddHomework ? '22px' : '2px', bottom: '2px', 
+                              backgroundColor: user.canAddHomework ? 'white' : 'var(--text-secondary)', 
+                              borderRadius: '50%', transition: '.4s' 
+                            }} />
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
           )}
 
           {activeTab === 'subject-details' && quickEditSubject && (
