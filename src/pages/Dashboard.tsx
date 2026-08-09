@@ -5,7 +5,7 @@ import { doc, updateDoc, setDoc, collection, onSnapshot, addDoc, query, where, d
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
-import { LogOut, Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft, Camera, Trash2, Lock, Eye, EyeOff, Edit2, Check, Globe, MessageSquare, Send, CornerUpLeft } from 'lucide-react';
+import { Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft, Camera, Trash2, Lock, Eye, EyeOff, Edit2, Globe, MessageSquare, Send, CornerUpLeft } from 'lucide-react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { useLanguage } from '../contexts/LanguageContext';
 import type { TranslationKey } from '../translations';
@@ -1209,103 +1209,103 @@ export function Dashboard({ user }: DashboardProps) {
             ) : (
               <>
             {/* Header: Avatar, Name, Email */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', width: '100%', marginBottom: '1.5rem' }}>
               <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
-              <div style={{ position: 'relative' }}>
-                <div 
-                  onClick={() => !isUploadingAvatar && avatarInputRef.current?.click()}
-                  style={{ width: '96px', height: '96px', borderRadius: '50%', background: 'var(--bg-secondary)', border: '2px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', position: 'relative', boxShadow: 'var(--shadow-sm)' }}
-                >
-                  {avatarUrl ? (
-                    <img src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <UserCircle size={48} color="var(--text-secondary)" />
-                  )}
-                  {isUploadingAvatar && (
-                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ width: '24px', height: '24px', border: '3px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                    </div>
-                  )}
-                </div>
-                <button
-                  onClick={() => !isUploadingAvatar && avatarInputRef.current?.click()}
-                  style={{ position: 'absolute', bottom: '2px', right: '2px', width: '28px', height: '28px', borderRadius: '50%', background: 'var(--accent-color)', border: '2px solid var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                  title="Change photo"
-                >
-                  <Camera size={14} color="#fff" />
-                </button>
+              
+              <div 
+                onClick={() => !isUploadingAvatar && avatarInputRef.current?.click()}
+                style={{ width: '88px', height: '88px', borderRadius: '50%', background: 'var(--bg-secondary)', border: '2px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', position: 'relative', boxShadow: 'var(--shadow-sm)' }}
+              >
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <UserCircle size={48} color="var(--text-secondary)" />
+                )}
+                {isUploadingAvatar && (
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="animate-spin" style={{ width: '24px', height: '24px', border: '3px solid #fff', borderTopColor: 'transparent', borderRadius: '50%' }} />
+                  </div>
+                )}
               </div>
+              
+              <button
+                onClick={() => !isUploadingAvatar && avatarInputRef.current?.click()}
+                style={{ background: 'none', border: 'none', color: 'var(--accent-color)', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+              >
+                <Camera size={14} /> Edit Photo
+              </button>
 
               {avatarUrl && (
-                <button onClick={handleDeleteAvatar} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 500, marginTop: '-0.5rem' }}>
-                  <Trash2 size={13} /> {t('profile_remove_photo')}
+                <button onClick={handleDeleteAvatar} style={{ background: 'none', border: 'none', color: '#ff3b30', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '-0.25rem' }}>
+                  <Trash2 size={14} /> {t('profile_remove_photo')}
                 </button>
               )}
 
-              <div style={{ textAlign: 'center' }}>
-                <h2 style={{ fontSize: '1.5rem', margin: '0 0 0.25rem 0', fontWeight: 600 }}>{displayName}</h2>
-                <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.875rem' }}>{user.email} &bull; {t('profile_student_account')}</p>
+              <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+                <h2 style={{ fontSize: '1.5rem', margin: '0 0 0.1rem 0', fontWeight: 700, letterSpacing: '-0.02em' }}>{displayName}</h2>
+                <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.9rem' }}>{user.email}</p>
               </div>
             </div>
 
-            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
               
               {/* Account Settings Section */}
               <div>
-                <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', marginLeft: '0.75rem', fontWeight: 600 }}>{t('profile_section_account')}</h3>
+                <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', marginLeft: '1rem', fontWeight: 600 }}>{t('profile_section_account')}</h3>
                 <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden' }}>
                   
                   {/* Display Name Item */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', borderBottom: '1px solid var(--border-color)' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Edit2 size={16} color="var(--accent-color)" />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem' }}>
+                    <div style={{ width: '30px', height: '30px', borderRadius: '6px', background: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <UserIcon size={16} color="var(--accent-color)" />
                     </div>
                     {!editingDisplayName ? (
-                      <>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-primary)' }}>{t('profile_display_name')}</div>
-                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</div>
+                      <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => { setEditingDisplayName(true); setDisplayNameInput(displayName); }}>
+                        <span style={{ fontSize: '1rem', fontWeight: 500, color: 'var(--text-primary)' }}>{t('profile_display_name')}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>{displayName}</span>
+                          <ArrowLeft size={16} color="var(--text-secondary)" style={{ transform: 'rotate(180deg)' }} />
                         </div>
-                        <button onClick={() => { setEditingDisplayName(true); setDisplayNameInput(displayName); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-color)', padding: '0.25rem' }}>
-                          <Edit2 size={18} />
-                        </button>
-                      </>
+                      </div>
                     ) : (
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <input
                           autoFocus
                           value={displayNameInput}
                           onChange={e => setDisplayNameInput(e.target.value)}
-                          className="input-field"
                           placeholder={t('profile_enter_name')}
                           maxLength={30}
-                          style={{ padding: '0.5rem', borderRadius: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                          style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '1rem', outline: 'none' }}
                         />
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <button disabled={savingDisplayName || !displayNameInput.trim()} onClick={async () => {
-                            if (!displayNameInput.trim()) return;
-                            setSavingDisplayName(true);
-                            try {
-                              await setDoc(doc(db, 'users', user.uid), { displayName: displayNameInput.trim() }, { merge: true });
-                              setEditingDisplayName(false);
-                            } catch (err: any) { alert(`Failed to save: ${err.message}`); }
-                            finally { setSavingDisplayName(false); }
-                          }} className="btn btn-primary" style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem', borderRadius: '8px' }}>
-                            {savingDisplayName ? '...' : <><Check size={14} /> {t('profile_save')}</>}
-                          </button>
-                          <button onClick={() => setEditingDisplayName(false)} style={{ padding: '0.4rem 0.75rem', borderRadius: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.8rem' }}>{t('profile_cancel')}</button>
-                        </div>
+                        <button disabled={savingDisplayName || !displayNameInput.trim()} onClick={async () => {
+                          if (!displayNameInput.trim()) return;
+                          setSavingDisplayName(true);
+                          try {
+                            await setDoc(doc(db, 'users', user.uid), { displayName: displayNameInput.trim() }, { merge: true });
+                            setEditingDisplayName(false);
+                          } catch (err: any) { alert(`Failed to save: ${err.message}`); }
+                          finally { setSavingDisplayName(false); }
+                        }} style={{ background: 'none', border: 'none', color: 'var(--accent-color)', fontWeight: 600, fontSize: '1rem', cursor: 'pointer' }}>
+                          {savingDisplayName ? '...' : t('profile_save')}
+                        </button>
                       </div>
                     )}
                   </div>
+                </div>
+              </div>
 
+              {/* Preferences Section */}
+              <div>
+                <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', marginLeft: '1rem', fontWeight: 600 }}>Preferences</h3>
+                <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden' }}>
+                  
                   {/* Language Item */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-color)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: '30px', height: '30px', borderRadius: '6px', background: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Globe size={16} color="var(--accent-color)" />
                       </div>
-                      <span style={{ fontSize: '0.95rem', fontWeight: 500 }}>{t('profile_language')}</span>
+                      <span style={{ fontSize: '1rem', fontWeight: 500 }}>{t('profile_language')}</span>
                     </div>
                     <select
                       value={language}
@@ -1319,12 +1319,12 @@ export function Dashboard({ user }: DashboardProps) {
                   </div>
 
                   {/* Theme Item */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', borderTop: '1px solid var(--border-color)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: '30px', height: '30px', borderRadius: '6px', background: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Eye size={16} color="var(--accent-color)" />
                       </div>
-                      <span style={{ fontSize: '0.95rem', fontWeight: 500 }}>{t('profile_theme')}</span>
+                      <span style={{ fontSize: '1rem', fontWeight: 500 }}>{t('profile_theme')}</span>
                     </div>
                     <select
                       value={theme}
@@ -1341,75 +1341,89 @@ export function Dashboard({ user }: DashboardProps) {
 
               {/* Security Section */}
               <div>
-                <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', marginLeft: '0.75rem', fontWeight: 600 }}>{t('profile_section_security')}</h3>
-                {!showChangePassword ? (
-                  <div style={{ width: '100%', padding: '1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} onClick={() => setShowChangePassword(true)}>
+                <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', marginLeft: '1rem', fontWeight: 600 }}>{t('profile_section_security')}</h3>
+                <div style={{ width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden' }}>
+                  <div style={{ padding: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} onClick={() => setShowChangePassword(true)}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255, 59, 48, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: '30px', height: '30px', borderRadius: '6px', background: 'rgba(255, 59, 48, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Lock size={16} color="#ff3b30" />
                       </div>
-                      <span style={{ fontSize: '0.95rem', fontWeight: 500 }}>{t('profile_change_password')}</span>
+                      <span style={{ fontSize: '1rem', fontWeight: 500 }}>{t('profile_change_password')}</span>
                     </div>
-                    <ArrowLeft size={18} color="var(--text-secondary)" style={{ transform: 'rotate(180deg)' }} />
+                    <ArrowLeft size={16} color="var(--text-secondary)" style={{ transform: 'rotate(180deg)' }} />
                   </div>
-                ) : (
-                  <div style={{ width: '100%', padding: '1.25rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                      <button onClick={() => { setShowChangePassword(false); setPwMessage(null); setOldPassword(''); setNewPassword(''); setConfirmPassword(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
-                        <ArrowLeft size={20} />
-                      </button>
-                      <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <Lock size={16} color="#ff3b30" /> {t('profile_change_password')}
-                      </h3>
-                    </div>
+                </div>
+              </div>
 
-                    <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                      <div className="input-group">
-                        <label className="input-label" style={{ fontSize: '0.8rem' }}>{t('profile_old_password')}</label>
-                        <div style={{ position: 'relative' }}>
-                          <input type={showOldPw ? 'text' : 'password'} required value={oldPassword} onChange={e => setOldPassword(e.target.value)} className="input-field" placeholder="Enter old password" style={{ padding: '0.6rem', paddingRight: '2.5rem', fontSize: '0.9rem', borderRadius: '8px', background: 'var(--bg-primary)' }} />
-                          <button type="button" onClick={() => setShowOldPw(p => !p)} style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                            {showOldPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </button>
-                        </div>
-                      </div>
-                      <div className="input-group">
-                        <label className="input-label" style={{ fontSize: '0.8rem' }}>{t('profile_new_password')}</label>
-                        <div style={{ position: 'relative' }}>
-                          <input type={showNewPw ? 'text' : 'password'} required value={newPassword} onChange={e => setNewPassword(e.target.value)} className="input-field" placeholder="At least 6 characters" style={{ padding: '0.6rem', paddingRight: '2.5rem', fontSize: '0.9rem', borderRadius: '8px', background: 'var(--bg-primary)' }} />
-                          <button type="button" onClick={() => setShowNewPw(p => !p)} style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                            {showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </button>
-                        </div>
-                      </div>
-                      <div className="input-group">
-                        <label className="input-label" style={{ fontSize: '0.8rem' }}>{t('profile_confirm_password')}</label>
-                        <div style={{ position: 'relative' }}>
-                          <input type={showConfirmPw ? 'text' : 'password'} required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="input-field" placeholder="Repeat new password" style={{ padding: '0.6rem', paddingRight: '2.5rem', fontSize: '0.9rem', borderRadius: '8px', background: 'var(--bg-primary)' }} />
-                          <button type="button" onClick={() => setShowConfirmPw(p => !p)} style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                            {showConfirmPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </button>
-                        </div>
-                      </div>
-
-                      {pwMessage && (
-                        <div style={{ padding: '0.5rem', borderRadius: '8px', background: pwMessage.type === 'success' ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 59, 48, 0.1)', border: `1px solid ${pwMessage.type === 'success' ? '#34c759' : '#ff3b30'}`, color: pwMessage.type === 'success' ? '#34c759' : '#ff3b30', fontSize: '0.8rem' }}>
-                          {pwMessage.text}
-                        </div>
-                      )}
-
-                      <Button type="submit" variant="primary" isLoading={pwLoading} style={{ marginTop: '0.5rem', padding: '0.75rem', fontSize: '0.95rem', justifyContent: 'center', borderRadius: '8px' }}>
-                        {t('profile_save')}
-                      </Button>
-                    </form>
-                  </div>
-                )}
+              {/* Sign Out Section */}
+              <div style={{ marginTop: '0.5rem' }}>
+                <div 
+                  onClick={handleSignOut}
+                  style={{ width: '100%', padding: '1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <span style={{ color: '#ff3b30', fontSize: '1.05rem', fontWeight: 600 }}>
+                    {loading ? '...' : t('profile_sign_out')}
+                  </span>
+                </div>
               </div>
             </div>
 
-            <Button variant="secondary" onClick={handleSignOut} isLoading={loading} style={{ width: '100%' }}>
-              <LogOut size={16} /> {t('profile_sign_out')}
-            </Button>
+            {/* Change Password Modal */}
+            {showChangePassword && (
+              <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-primary)', zIndex: 1000, display: 'flex', flexDirection: 'column' }} className="animate-slide-up">
+                <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', borderBottom: '1px solid var(--border-color)' }}>
+                  <button onClick={() => { setShowChangePassword(false); setPwMessage(null); setOldPassword(''); setNewPassword(''); setConfirmPassword(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-color)', fontSize: '1rem' }}>
+                    {t('profile_cancel')}
+                  </button>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>
+                    {t('profile_change_password')}
+                  </h3>
+                  <div style={{ width: '60px' }}></div> {/* Spacer for centering */}
+                </header>
+
+                <div style={{ padding: '1.5rem 1rem' }}>
+                  <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', background: 'var(--bg-secondary)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                    <div className="input-group" style={{ margin: 0 }}>
+                      <label className="input-label">{t('profile_old_password')}</label>
+                      <div style={{ position: 'relative' }}>
+                        <input type={showOldPw ? 'text' : 'password'} required value={oldPassword} onChange={e => setOldPassword(e.target.value)} className="input-field" placeholder="Enter old password" />
+                        <button type="button" onClick={() => setShowOldPw(p => !p)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                          {showOldPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="input-group" style={{ margin: 0 }}>
+                      <label className="input-label">{t('profile_new_password')}</label>
+                      <div style={{ position: 'relative' }}>
+                        <input type={showNewPw ? 'text' : 'password'} required value={newPassword} onChange={e => setNewPassword(e.target.value)} className="input-field" placeholder="At least 6 characters" />
+                        <button type="button" onClick={() => setShowNewPw(p => !p)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                          {showNewPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="input-group" style={{ margin: 0 }}>
+                      <label className="input-label">{t('profile_confirm_password')}</label>
+                      <div style={{ position: 'relative' }}>
+                        <input type={showConfirmPw ? 'text' : 'password'} required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="input-field" placeholder="Repeat new password" />
+                        <button type="button" onClick={() => setShowConfirmPw(p => !p)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                          {showConfirmPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {pwMessage && (
+                      <div style={{ padding: '0.75rem', borderRadius: '8px', background: pwMessage.type === 'success' ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 59, 48, 0.1)', color: pwMessage.type === 'success' ? '#34c759' : '#ff3b30', fontSize: '0.875rem' }}>
+                        {pwMessage.text}
+                      </div>
+                    )}
+
+                    <Button type="submit" variant="primary" isLoading={pwLoading} style={{ marginTop: '0.5rem' }}>
+                      {t('profile_save')}
+                    </Button>
+                  </form>
+                </div>
+              </div>
+            )}
               </>
             )}
           </div>
