@@ -1142,24 +1142,41 @@ export function Dashboard({ user }: DashboardProps) {
                               </div>
                             )}
                             <div>
-                              {msg.text.startsWith('[HW_SHARE:') ? (() => {
-                                const hwId = msg.text.replace('[HW_SHARE:', '').replace(']', '').trim();
+                              {(() => {
+                                const hwMatch = msg.text.match(/\[HW_SHARE:([^\]]+)\]/);
+                                if (!hwMatch) return msg.text;
+                                
+                                const hwId = hwMatch[1].trim();
                                 const hw = homeworkList.find((h: any) => h.id === hwId);
-                                if (!hw) return <div style={{ fontStyle: 'italic', opacity: 0.8 }}>Shared homework not found.</div>;
-                                const subject = subjectList.find(s => s.id === hw.subjectId);
+                                const textBefore = msg.text.substring(0, hwMatch.index);
+                                const textAfter = msg.text.substring(hwMatch.index! + hwMatch[0].length);
+
                                 return (
-                                  <div onClick={() => setSelectedHomework(hw)} style={{ cursor: 'pointer', background: isMe ? 'rgba(255,255,255,0.1)' : 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '0.75rem', padding: '0.75rem', marginTop: '0.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: isMe ? 'var(--accent-text)' : 'var(--text-secondary)' }}>
-                                      <BookOpen size={16} />
-                                      <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{subject?.name || t('form_select_subject' as TranslationKey)}</span>
-                                    </div>
-                                    <div style={{ fontWeight: 600, fontSize: '0.95rem', color: isMe ? 'var(--accent-text)' : 'var(--text-primary)' }}>{hw.title}</div>
-                                    <div style={{ fontSize: '0.8rem', opacity: 0.8, color: isMe ? 'var(--accent-text)' : 'var(--text-secondary)' }}>Due: {new Date(hw.dueDate).toLocaleDateString()}</div>
-                                    <CompletedByAvatars homeworkId={hw.id} allCompleted={allCompletedHomework} users={userList} />
-                                    <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: isMe ? 'var(--accent-text)' : 'var(--accent-color)', fontWeight: 600, textDecoration: 'underline' }}>Tap to view details</div>
-                                  </div>
+                                  <>
+                                    {textBefore.trim() && <div style={{ whiteSpace: 'pre-wrap', marginBottom: '0.5rem' }}>{textBefore.trim()}</div>}
+                                    
+                                    {hw ? (() => {
+                                      const subject = subjectList.find(s => s.id === hw.subjectId);
+                                      return (
+                                        <div onClick={() => setSelectedHomework(hw)} style={{ cursor: 'pointer', background: isMe ? 'rgba(255,255,255,0.1)' : 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '0.75rem', padding: '0.75rem', marginTop: textBefore.trim() ? '0.5rem' : '0.25rem', marginBottom: textAfter.trim() ? '0.5rem' : 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: isMe ? 'var(--accent-text)' : 'var(--text-secondary)' }}>
+                                            <BookOpen size={16} />
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{subject?.name || t('form_select_subject' as TranslationKey)}</span>
+                                          </div>
+                                          <div style={{ fontWeight: 600, fontSize: '0.95rem', color: isMe ? 'var(--accent-text)' : 'var(--text-primary)' }}>{hw.title}</div>
+                                          <div style={{ fontSize: '0.8rem', opacity: 0.8, color: isMe ? 'var(--accent-text)' : 'var(--text-secondary)' }}>Due: {new Date(hw.dueDate).toLocaleDateString()}</div>
+                                          <CompletedByAvatars homeworkId={hw.id} allCompleted={allCompletedHomework} users={userList} />
+                                          <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: isMe ? 'var(--accent-text)' : 'var(--accent-color)', fontWeight: 600, textDecoration: 'underline' }}>Tap to view details</div>
+                                        </div>
+                                      );
+                                    })() : (
+                                      <div style={{ fontStyle: 'italic', opacity: 0.8, margin: '0.5rem 0' }}>Shared homework not found.</div>
+                                    )}
+
+                                    {textAfter.trim() && <div style={{ whiteSpace: 'pre-wrap', marginTop: '0.5rem' }}>{textAfter.trim()}</div>}
+                                  </>
                                 );
-                              })() : msg.text}
+                              })()}
                               {msg.isEdited && <span style={{ fontSize: '0.7rem', opacity: 0.6, marginLeft: '0.5rem' }}>({t('chat_edited_mark' as TranslationKey)})</span>}
                             </div>
                           </div>

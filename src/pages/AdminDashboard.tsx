@@ -62,7 +62,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
   const [userList, setUserList] = useState<UserData[]>([]);
   const [subjectList, setSubjectList] = useState<SubjectData[]>([]);
   const [homeworkList, setHomeworkList] = useState<HomeworkData[]>([]);
-  const [allCompletedHomework, setAllCompletedHomework] = useState<{userId: string, homeworkId: string}[]>([]);
+  const [allCompletedHomework, setAllCompletedHomework] = useState<{ userId: string, homeworkId: string }[]>([]);
   const [homeworkRequests, setHomeworkRequests] = useState<HomeworkRequestData[]>([]);
 
   // Subject Form State
@@ -134,7 +134,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
     const unsubscribeCompletions = onSnapshot(
       collection(db, 'completedHomework'),
       (snapshot) => {
-        const completed: {userId: string, homeworkId: string}[] = [];
+        const completed: { userId: string, homeworkId: string }[] = [];
         snapshot.forEach((doc) => {
           const data = doc.data();
           if (data.userId && data.homeworkId) {
@@ -1063,7 +1063,7 @@ const navBtnStyle = (isActive: boolean): React.CSSProperties => ({
   flex: 1
 });
 
-const CompletedByAvatars = ({ homeworkId, allCompleted, users }: { homeworkId: string, allCompleted: {userId: string, homeworkId: string}[], users: UserData[] }) => {
+const CompletedByAvatars = ({ homeworkId, allCompleted, users }: { homeworkId: string, allCompleted: { userId: string, homeworkId: string }[], users: UserData[] }) => {
   const completedUsers = allCompleted.filter(c => c.homeworkId === homeworkId);
   if (completedUsers.length === 0) return null;
 
@@ -1077,29 +1077,29 @@ const CompletedByAvatars = ({ homeworkId, allCompleted, users }: { homeworkId: s
         const u = users.find(user => user.id === cu.userId);
         if (!u || !u.avatarUrl) return null;
         return (
-          <img 
-            key={cu.userId} 
-            src={u.avatarUrl} 
+          <img
+            key={cu.userId}
+            src={u.avatarUrl}
             title={u.displayName || u.username}
-            style={{ 
-              width: '26px', 
-              height: '26px', 
-              borderRadius: '50%', 
-              border: '2px solid var(--bg-secondary)', 
+            style={{
+              width: '26px',
+              height: '26px',
+              borderRadius: '50%',
+              border: '2px solid var(--bg-secondary)',
               marginLeft: idx === 0 ? 0 : '-10px',
               objectFit: 'cover',
               zIndex: 10 - idx
-            }} 
-            alt={u.username} 
+            }}
+            alt={u.username}
           />
         );
       })}
       {extraCount > 0 && (
         <div style={{
-          width: '26px', 
-          height: '26px', 
-          borderRadius: '50%', 
-          border: '2px solid var(--bg-secondary)', 
+          width: '26px',
+          height: '26px',
+          borderRadius: '50%',
+          border: '2px solid var(--bg-secondary)',
           marginLeft: '-10px',
           background: 'var(--bg-primary)',
           color: 'var(--text-secondary)',
