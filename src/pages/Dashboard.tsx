@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { auth, db } from '../firebase';
 import { signOut, reauthenticateWithCredential, EmailAuthProvider, updatePassword } from 'firebase/auth';
-import { doc, updateDoc, setDoc, collection, onSnapshot, addDoc, query, where, deleteDoc } from 'firebase/firestore';
+import { doc, updateDoc, setDoc, collection, onSnapshot, addDoc, query, where, deleteDoc, increment } from 'firebase/firestore';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
-import { LogOut, Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft, Camera, Trash2, Lock, Eye, EyeOff, Users, Edit2, Check, Globe } from 'lucide-react';
+import { LogOut, Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft, Camera, Trash2, Lock, Eye, EyeOff, Users, Edit2, Check, Globe, MessageSquare, Send, CornerUpLeft } from 'lucide-react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { useLanguage } from '../contexts/LanguageContext';
 import type { TranslationKey } from '../translations';
@@ -44,12 +44,27 @@ export interface HomeworkRequestData {
   createdAt: string;
 }
 
+export interface MessageData {
+  id: string;
+  chatId: string;
+  senderId: string;
+  senderName: string;
+  text: string;
+  createdAt: string;
+  isEdited?: boolean;
+  replyTo?: {
+    id: string;
+    text: string;
+    senderName: string;
+  };
+}
+
 export function Dashboard({ user }: DashboardProps) {
   const { t, language, setLanguage } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [subjectList, setSubjectList] = useState<SubjectData[]>([]);
   const [homeworkList, setHomeworkList] = useState<HomeworkData[]>([]);
-  const [activeTab, setActiveTab] = useState<'home' | 'schedule' | 'analytics' | 'friends' | 'profile' | 'subject-details'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'schedule' | 'analytics' | 'friends' | 'profile' | 'subject-details' | 'chat'>('home');
   
   const currentDayIndex = new Date().getDay(); // 0 is Sunday
   const defaultDay = currentDayIndex === 0 ? 'Sunday' : 
@@ -62,6 +77,7 @@ export function Dashboard({ user }: DashboardProps) {
   const [selectedDay, setSelectedDay] = useState<string>(defaultDay);
   const [selectedSubject, setSelectedSubject] = useState<SubjectData | null>(null);
   const [subjectHwTab, setSubjectHwTab] = useState<'new' | 'urgent' | 'overdue' | 'completed'>('new');
+  const [homeHwTab, setHomeHwTab] = useState<'new' | 'pending' | 'urgent' | 'completed'>('pending');
 
   const [homeworkRequests, setHomeworkRequests] = useState<HomeworkRequestData[]>([]);
   const [showSuggestForm, setShowSuggestForm] = useState(false);
@@ -90,6 +106,114 @@ export function Dashboard({ user }: DashboardProps) {
   const [displayNameInput, setDisplayNameInput] = useState('');
   const [savingDisplayName, setSavingDisplayName] = useState(false);
 
+  // Chat State
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [chatMessages, setChatMessages] = useState<MessageData[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isFirstLoad = useRef(true);
+  const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
+  const [editingMessage, setEditingMessage] = useState<MessageData | null>(null);
+  const [replyingTo, setReplyingTo] = useState<MessageData | null>(null);
+
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  useEffect(() => {
+    isFirstLoad.current = true;
+    if (activeTab === 'chat' && activeChatId) {
+      const q = query(collection(db, 'messages'), where('chatId', '==', activeChatId));
+      const unsub = onSnapshot(q, (snap) => {
+        const msgs: MessageData[] = [];
+        
+        if (!isFirstLoad.current) {
+          snap.docChanges().forEach(change => {
+            if (change.type === 'added') {
+              const data = change.doc.data() as MessageData;
+              if (data.senderId !== user.uid && Notification.permission === 'granted') {
+                new Notification(`New message from ${data.senderName}`, { body: data.text });
+              }
+            }
+          });
+        }
+        
+        snap.forEach(d => msgs.push({ id: d.id, ...d.data() } as MessageData));
+        msgs.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        setChatMessages(msgs);
+        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+        isFirstLoad.current = false;
+      });
+      return () => unsub();
+    }
+  }, [activeTab, activeChatId]);
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim() || !activeChatId) return;
+    const msgText = chatInput.trim();
+    setChatInput('');
+    try {
+      if (editingMessage) {
+        await updateDoc(doc(db, 'messages', editingMessage.id), {
+          text: msgText,
+          isEdited: true
+        });
+        setEditingMessage(null);
+      } else {
+        const payload: any = {
+          chatId: activeChatId,
+          senderId: user.uid,
+          senderName: displayName || user.email?.split('@')[0] || 'Unknown',
+          text: msgText,
+          createdAt: new Date().toISOString()
+        };
+        if (replyingTo) {
+          payload.replyTo = {
+            id: replyingTo.id,
+            text: replyingTo.text,
+            senderName: replyingTo.senderName
+          };
+        }
+        await addDoc(collection(db, 'messages'), payload);
+        
+        if (activeChatId !== 'global') {
+          const recipientId = activeChatId.replace(user.uid, '').replace('_', '');
+          if (recipientId) {
+            setDoc(doc(db, `users/${recipientId}/chats`, activeChatId), {
+              unreadCount: increment(1),
+              updatedAt: new Date().toISOString()
+            }, { merge: true }).catch(console.error);
+          }
+        }
+
+        setReplyingTo(null);
+      }
+    } catch (err) {
+      console.error("Error sending message", err);
+      alert("Failed to send message");
+    }
+  };
+
+  const handleDeleteMessage = async (id: string) => {
+    if (confirm(t('chat_delete' as TranslationKey) + '?')) {
+      try {
+        await deleteDoc(doc(db, 'messages', id));
+        setActiveMessageId(null);
+      } catch (err) {
+        console.error("Error deleting message", err);
+      }
+    }
+  };
+
+  const startPrivateChat = (friendId: string) => {
+    const chatId = [user.uid, friendId].sort().join('_');
+    setActiveChatId(chatId);
+    setActiveTab('chat');
+  };
+
   // Friends / User List State
   interface UserListItem {
     id: string;
@@ -99,6 +223,7 @@ export function Dashboard({ user }: DashboardProps) {
     isOnline?: boolean;
   }
   const [userList, setUserList] = useState<UserListItem[]>([]);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
   // Change Password State
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -153,6 +278,24 @@ export function Dashboard({ user }: DashboardProps) {
       unsubUsers();
     };
   }, [user.uid, editingDisplayName]);
+
+  useEffect(() => {
+    if (!user) return;
+    const unsub = onSnapshot(collection(db, `users/${user.uid}/chats`), (snap) => {
+      const counts: Record<string, number> = {};
+      snap.forEach(d => {
+        counts[d.id] = d.data().unreadCount || 0;
+      });
+      setUnreadCounts(counts);
+    });
+    return () => unsub();
+  }, [user.uid]);
+
+  useEffect(() => {
+    if (activeChatId && activeChatId !== 'global' && user) {
+      setDoc(doc(db, `users/${user.uid}/chats`, activeChatId), { unreadCount: 0 }, { merge: true }).catch(console.error);
+    }
+  }, [activeChatId, user.uid]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -396,14 +539,15 @@ export function Dashboard({ user }: DashboardProps) {
   });
 
   // Analytics Calculations
-  const totalHomework = homeworkList.length;
+  const pendingHomeworkList = homeworkList.filter(hw => !completedHomeworkIds.has(hw.id));
+  const totalHomework = pendingHomeworkList.length;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const nextWeek = new Date(today);
   nextWeek.setDate(nextWeek.getDate() + 7);
 
-  const hwDueThisWeek = homeworkList.filter(hw => {
+  const hwDueThisWeek = pendingHomeworkList.filter(hw => {
     const due = new Date(hw.dueDate);
     return due >= today && due <= nextWeek;
   }).length;
@@ -484,26 +628,72 @@ export function Dashboard({ user }: DashboardProps) {
               </div>
             </Card>
 
-            {/* Upcoming Homework */}
+            {/* Homework List */}
             <Card>
               <h3 style={{ fontSize: '1.125rem', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <CheckSquare size={20} /> {t('home_urgent_homework')}
+                <CheckSquare size={20} /> {t('home_homework')}
               </h3>
+
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '0.5rem' }}>
+                {(['new', 'pending', 'urgent', 'completed'] as const).map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setHomeHwTab(tab)}
+                    style={{
+                      padding: '0.4rem 0.8rem',
+                      borderRadius: 'var(--radius-xl)',
+                      border: 'none',
+                      fontWeight: 600,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      transition: 'all 0.2s',
+                      background: homeHwTab === tab ? 'var(--accent-color)' : 'var(--bg-secondary)',
+                      color: homeHwTab === tab ? 'var(--accent-text)' : 'var(--text-secondary)',
+                      boxShadow: homeHwTab === tab ? 'var(--shadow-sm)' : 'none',
+                    }}
+                  >
+                    {t(`hw_tab_${tab}` as TranslationKey)}
+                  </button>
+                ))}
+              </div>
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {(() => {
-                  const urgentHw = homeworkList.filter(hw => !completedHomeworkIds.has(hw.id)).slice(0, 3);
-                  if (urgentHw.length === 0) {
-                    return <p style={{ textAlign: 'center', color: 'var(--text-secondary)', margin: '1rem 0' }}>{t('home_all_caught_up')}</p>;
+                  const now = new Date();
+                  now.setHours(0, 0, 0, 0);
+                  const threeDaysFromNow = new Date(now);
+                  threeDaysFromNow.setDate(now.getDate() + 3);
+
+                  const filteredHw = homeworkList.filter(hw => {
+                    const isCompleted = completedHomeworkIds.has(hw.id);
+                    if (homeHwTab === 'completed') return isCompleted;
+                    if (isCompleted) return false;
+
+                    const dueDate = new Date(hw.dueDate);
+                    dueDate.setHours(0, 0, 0, 0);
+
+                    if (homeHwTab === 'pending') return true;
+                    if (homeHwTab === 'urgent') return dueDate >= now && dueDate <= threeDaysFromNow;
+                    if (homeHwTab === 'new') return dueDate > threeDaysFromNow;
+                    
+                    return true;
+                  });
+
+                  if (filteredHw.length === 0) {
+                    return <p style={{ textAlign: 'center', color: 'var(--text-secondary)', margin: '1rem 0' }}>{t('hw_no_homework_in_tab')}</p>;
                   }
-                  return urgentHw.map(hw => {
+                  
+                  return filteredHw.map(hw => {
                     const subject = subjectList.find(s => s.id === hw.subjectId);
+                    const isCompleted = completedHomeworkIds.has(hw.id);
                     return (
                       <div key={hw.id} onClick={() => setSelectedHomework(hw)} style={{ padding: '0.75rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: '0.75rem', transition: 'background-color 0.2s' }}>
-                        <div style={{ marginTop: '0.1rem' }}>
-                          <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: '2px solid var(--text-secondary)' }} />
+                        <div style={{ marginTop: '0.1rem', color: isCompleted ? '#10b981' : 'var(--text-secondary)' }}>
+                           {isCompleted ? <CheckCircle2 size={20} /> : <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: '2px solid var(--text-secondary)' }} />}
                         </div>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 600, marginBottom: '0.25rem', color: 'var(--text-primary)', fontSize: '0.875rem' }}>{hw.title}</div>
+                          <div style={{ fontWeight: 600, marginBottom: '0.25rem', color: isCompleted ? 'var(--text-secondary)' : 'var(--text-primary)', textDecoration: isCompleted ? 'line-through' : 'none', fontSize: '0.875rem' }}>{hw.title}</div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span>{subject ? subject.name : 'Unknown Subject'}</span>
                             <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.2rem 0.5rem', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-xl)', fontWeight: 600, color: 'var(--text-primary)' }}>
@@ -605,34 +795,7 @@ export function Dashboard({ user }: DashboardProps) {
               </div>
             </div>
 
-            {homeworkRequests.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '2rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.125rem', margin: '0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Clock size={18} /> {t('schedule_your_suggestions')}
-                </h3>
-                {homeworkRequests.map(req => {
-                  const subject = subjectList.find(s => s.id === req.subjectId);
-                  return (
-                    <div key={req.id} style={{ padding: '1rem', background: 'var(--bg-primary)', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{req.title}</div>
-                        <div style={{ 
-                          fontSize: '0.75rem', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-xl)',
-                          background: req.status === 'pending' ? '#f59e0b20' : req.status === 'approved' ? '#10b98120' : '#ef444420',
-                          color: req.status === 'pending' ? '#f59e0b' : req.status === 'approved' ? '#10b981' : '#ef4444',
-                          textTransform: 'capitalize'
-                        }}>
-                          {req.status}
-                        </div>
-                      </div>
-                      <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                        {subject ? subject.name : 'Unknown'} &bull; Due: {new Date(req.dueDate).toLocaleDateString()}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-                )}
+
           </div>
         )}
 
@@ -703,52 +866,208 @@ export function Dashboard({ user }: DashboardProps) {
           </div>
         )}
 
-        {activeTab === 'friends' && (
-          <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <h2 style={{ fontSize: '1.25rem', margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Users size={22} color="var(--accent-color)" /> {t('friends_title')}
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.875rem' }}>
-              {userList.filter(u => u.isOnline).length} {t('friends_online')} &bull; {userList.length} {t('friends_total')}
-            </p>
-            {userList.length === 0 ? (
-              <Card style={{ padding: '2rem', textAlign: 'center', background: 'var(--bg-secondary)' }}>
-                <p style={{ color: 'var(--text-secondary)', margin: 0 }}>{t('friends_no_students')}</p>
-              </Card>
+        {activeTab === 'chat' && (
+          <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100dvh - 190px)', position: 'relative' }}>
+            {!activeChatId ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <h2 style={{ fontSize: '1.25rem', margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <MessageSquare size={22} color="var(--accent-color)" /> {t('chat_title' as TranslationKey)}
+                </h2>
+                <div 
+                  onClick={() => setActiveChatId('global')}
+                  style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', cursor: 'pointer', marginBottom: '1rem' }}
+                >
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--accent-color)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Globe size={24} color="#fff" />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{t('chat_global_room' as TranslationKey)}</div>
+                    <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Chat with everyone</div>
+                  </div>
+                </div>
+
+                <h3 style={{ fontSize: '1rem', margin: '0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Users size={18} color="var(--text-secondary)" /> {t('friends_title' as TranslationKey)} ({userList.filter(u => u.isOnline).length} {t('friends_online' as TranslationKey)})
+                </h3>
+                
+                {userList.length === 0 ? (
+                  <Card style={{ padding: '2rem', textAlign: 'center', background: 'var(--bg-secondary)' }}>
+                    <p style={{ color: 'var(--text-secondary)', margin: 0 }}>{t('friends_no_students' as TranslationKey)}</p>
+                  </Card>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', overflowY: 'auto', paddingBottom: '2rem', scrollbarWidth: 'none' }}>
+                    {userList.map(u => {
+                      const name = u.displayName || u.username || u.id;
+                      const hasDisplayName = !!u.displayName && u.displayName !== u.username;
+                      const chatId = [user.uid, u.id].sort().join('_');
+                      const unread = unreadCounts[chatId] || 0;
+                      return (
+                        <div key={u.id} onClick={() => startPrivateChat(u.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.875rem 1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', cursor: 'pointer' }}>
+                          <div style={{ position: 'relative', flexShrink: 0 }}>
+                            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--bg-primary)', border: '2px solid var(--border-color)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {u.avatarUrl ? (
+                                <img src={u.avatarUrl} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                <UserCircle size={28} color="var(--text-secondary)" />
+                              )}
+                            </div>
+                            <div style={{ position: 'absolute', bottom: '1px', right: '1px', width: '12px', height: '12px', borderRadius: '50%', background: u.isOnline ? 'var(--accent-color)' : 'var(--text-secondary)', border: '2px solid var(--bg-secondary)' }} />
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {name}
+                                {hasDisplayName && u.username && (
+                                  <span style={{ fontWeight: 400, color: 'var(--text-secondary)', fontSize: '0.75rem', marginLeft: '0.4rem' }}>
+                                    @{u.username}
+                                  </span>
+                                )}
+                              </span>
+                              {unread > 0 && (
+                                <div style={{ background: 'var(--accent-color)', color: 'var(--accent-text)', fontSize: '0.75rem', fontWeight: 600, minWidth: '20px', height: '20px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 0.4rem', border: '2px solid var(--bg-secondary)', flexShrink: 0 }}>
+                                  {unread > 99 ? '99+' : unread}
+                                </div>
+                              )}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: u.isOnline ? 'var(--accent-color)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.1rem' }}>
+                              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: u.isOnline ? 'var(--accent-color)' : 'var(--text-secondary)' }} />
+                              {u.isOnline ? t('friends_status_online' as TranslationKey) : t('friends_status_offline' as TranslationKey)}
+                            </div>
+                          </div>
+                          <MessageSquare size={16} color="var(--accent-color)" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {userList.map(u => {
-                  const name = u.displayName || u.username || u.id;
-                  const hasDisplayName = !!u.displayName && u.displayName !== u.username;
-                  return (
-                    <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.875rem 1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)' }}>
-                      <div style={{ position: 'relative', flexShrink: 0 }}>
-                        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--bg-primary)', border: '2px solid var(--border-color)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {u.avatarUrl ? (
-                            <img src={u.avatarUrl} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          ) : (
-                            <UserCircle size={28} color="var(--text-secondary)" />
+              <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-color)', marginBottom: '1rem' }}>
+                  <button onClick={() => setActiveChatId(null)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                    <ArrowLeft size={20} />
+                  </button>
+                  <div style={{ fontWeight: 600, fontSize: '1.125rem' }}>
+                    {activeChatId === 'global' ? t('chat_global_room' as TranslationKey) : (
+                      <>{t('chat_private_with' as TranslationKey)} {
+                        (() => {
+                          const u = userList.find(u => [user.uid, u.id].sort().join('_') === activeChatId);
+                          return u ? (u.displayName || u.username || u.id) : 'Unknown';
+                        })()
+                      }</>
+                    )}
+                  </div>
+                </div>
+                
+                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.4rem', paddingBottom: '1rem', scrollbarWidth: 'none' }}>
+                  {chatMessages.length === 0 ? (
+                    <div style={{ margin: 'auto', color: 'var(--text-secondary)' }}>{t('chat_no_messages' as TranslationKey)}</div>
+                  ) : (
+                    chatMessages.map(msg => {
+                      const isMe = msg.senderId === user.uid;
+                      const isActive = activeMessageId === msg.id;
+                      return (
+                        <div key={msg.id} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '80%', display: 'flex', flexDirection: 'column' }}>
+                          {!isMe && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.2rem', marginLeft: '0.5rem' }}>{msg.senderName}</div>}
+                          
+                          <div 
+                            onClick={() => setActiveMessageId(isActive ? null : msg.id)}
+                            style={{ 
+                              background: isMe ? 'var(--accent-color)' : 'var(--bg-secondary)', 
+                              color: isMe ? 'var(--accent-text)' : 'var(--text-primary)', 
+                              padding: '0.5rem 0.75rem', 
+                              borderRadius: '1rem',
+                              borderBottomRightRadius: isMe ? '0.2rem' : '1rem',
+                              borderBottomLeftRadius: !isMe ? '0.2rem' : '1rem',
+                              border: isMe ? 'none' : '1px solid var(--border-color)',
+                              wordBreak: 'break-word',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '0.25rem',
+                              fontSize: '0.875rem'
+                            }}
+                          >
+                            {msg.replyTo && (
+                              <div style={{
+                                padding: '0.4rem 0.5rem',
+                                background: isMe ? 'color-mix(in srgb, var(--accent-text) 15%, transparent)' : 'color-mix(in srgb, var(--text-primary) 5%, transparent)',
+                                borderRadius: '0.25rem',
+                                borderLeft: `3px solid ${isMe ? 'var(--accent-text)' : 'var(--border-color)'}`,
+                                fontSize: '0.7rem',
+                                marginBottom: '0.25rem',
+                                color: isMe ? 'var(--accent-text)' : 'var(--text-primary)'
+                              }}>
+                                <div style={{ fontWeight: 600, marginBottom: '0.125rem', opacity: 0.9 }}>{msg.replyTo.senderName}</div>
+                                <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', opacity: 0.8 }}>{msg.replyTo.text}</div>
+                              </div>
+                            )}
+                            <div>
+                              {msg.text}
+                              {msg.isEdited && <span style={{ fontSize: '0.65rem', opacity: 0.7, marginLeft: '0.5rem' }}>{t('chat_edited_mark' as TranslationKey)}</span>}
+                            </div>
+                          </div>
+                          
+                          {isActive && (
+                            <div className="animate-fade-in" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', alignSelf: isMe ? 'flex-end' : 'flex-start', padding: '0.4rem 0.5rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', boxShadow: 'var(--shadow-md)', zIndex: 10 }}>
+                              <button onClick={() => { setReplyingTo(msg); setActiveMessageId(null); setEditingMessage(null); document.getElementById('chat-input')?.focus(); }} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', padding: '0 0.25rem', fontWeight: 500 }}>
+                                <CornerUpLeft size={14} color="var(--text-secondary)" /> {t('chat_reply' as TranslationKey)}
+                              </button>
+                              {isMe && (
+                                <>
+                                  <div style={{ width: '1px', background: 'var(--border-color)' }} />
+                                  <button onClick={() => { setEditingMessage(msg); setChatInput(msg.text); setActiveMessageId(null); setReplyingTo(null); document.getElementById('chat-input')?.focus(); }} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', padding: '0 0.25rem', fontWeight: 500 }}>
+                                    <Edit2 size={14} color="var(--text-secondary)" /> {t('chat_edit' as TranslationKey)}
+                                  </button>
+                                  <div style={{ width: '1px', background: 'var(--border-color)' }} />
+                                  <button onClick={() => { handleDeleteMessage(msg.id); setActiveMessageId(null); }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', padding: '0 0.25rem', fontWeight: 500 }}>
+                                    <Trash2 size={14} /> {t('chat_delete' as TranslationKey)}
+                                  </button>
+                                </>
+                              )}
+                            </div>
                           )}
                         </div>
-                        <div style={{ position: 'absolute', bottom: '1px', right: '1px', width: '12px', height: '12px', borderRadius: '50%', background: u.isOnline ? '#10b981' : '#6b7280', border: '2px solid var(--bg-secondary)' }} />
+                      );
+                    })
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: 'auto' }}>
+                  {(replyingTo || editingMessage) && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', borderLeft: '3px solid var(--accent-color)' }}>
+                      <div style={{ fontSize: '0.875rem', overflow: 'hidden' }}>
+                        {replyingTo ? (
+                          <>
+                            <div style={{ fontWeight: 600, color: 'var(--accent-color)' }}>{t('chat_replying_to' as TranslationKey)} {replyingTo.senderName}</div>
+                            <div style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{replyingTo.text}</div>
+                          </>
+                        ) : editingMessage ? (
+                          <>
+                            <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{t('chat_editing' as TranslationKey)}</div>
+                            <div style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{editingMessage.text}</div>
+                          </>
+                        ) : null}
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {name}
-                          {hasDisplayName && u.username && (
-                            <span style={{ fontWeight: 400, color: 'var(--text-secondary)', fontSize: '0.75rem', marginLeft: '0.4rem' }}>
-                              @{u.username}
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: u.isOnline ? '#10b981' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.1rem' }}>
-                          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: u.isOnline ? '#10b981' : '#6b7280' }} />
-                          {u.isOnline ? t('friends_status_online') : t('friends_status_offline')}
-                        </div>
-                      </div>
+                      <button onClick={() => { setReplyingTo(null); setEditingMessage(null); setChatInput(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.25rem' }}>
+                        <X size={16} />
+                      </button>
                     </div>
-                  );
-                })}
+                  )}
+                  <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input
+                      id="chat-input"
+                      value={chatInput}
+                      onChange={e => setChatInput(e.target.value)}
+                      placeholder={t('chat_type_message' as TranslationKey)}
+                      style={{ flex: 1, padding: '0.6rem 1rem', borderRadius: 'var(--radius-full)', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', outline: 'none', fontSize: '0.875rem' }}
+                    />
+                    <button type="submit" disabled={!chatInput.trim()} style={{ background: 'var(--accent-color)', border: 'none', width: '38px', height: '38px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-text)', cursor: chatInput.trim() ? 'pointer' : 'not-allowed', opacity: chatInput.trim() ? 1 : 0.5 }}>
+                      <Send size={18} style={{ marginLeft: '-0.1rem' }} />
+                    </button>
+                  </form>
+                </div>
               </div>
             )}
           </div>
@@ -995,6 +1314,37 @@ export function Dashboard({ user }: DashboardProps) {
                 </Button>
               </div>
             </Card>
+
+            {(() => {
+              const subjectRequests = homeworkRequests.filter(req => req.subjectId === selectedSubject.id);
+              if (subjectRequests.length === 0) return null;
+              
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                  <h3 style={{ fontSize: '1.125rem', margin: '0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Clock size={18} /> {t('schedule_your_suggestions')}
+                  </h3>
+                  {subjectRequests.map(req => (
+                    <div key={req.id} style={{ padding: '1rem', background: 'var(--bg-primary)', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{req.title}</div>
+                        <div style={{ 
+                          fontSize: '0.75rem', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-xl)',
+                          background: req.status === 'pending' ? '#f59e0b20' : req.status === 'approved' ? '#10b98120' : '#ef444420',
+                          color: req.status === 'pending' ? '#f59e0b' : req.status === 'approved' ? '#10b981' : '#ef4444',
+                          textTransform: 'capitalize'
+                        }}>
+                          {req.status}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                        Due: {new Date(req.dueDate).toLocaleDateString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
 
             <div>
               <h3 style={{ fontSize: '1.125rem', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -1293,9 +1643,16 @@ export function Dashboard({ user }: DashboardProps) {
           <Calendar size={20} />
           <span>{t('nav_schedule')}</span>
         </button>
-        <button onClick={() => setActiveTab('friends')} style={navBtnStyle(activeTab === 'friends')}>
-          <Users size={20} />
-          <span>{t('nav_friends')}</span>
+        <button onClick={() => { setActiveTab('chat'); if (activeChatId) setActiveChatId(null); }} style={navBtnStyle(activeTab === 'chat')}>
+          <div style={{ position: 'relative' }}>
+            <MessageSquare size={20} />
+            {Object.values(unreadCounts).reduce((a, b) => a + b, 0) > 0 && (
+              <div style={{ position: 'absolute', top: '-4px', right: '-8px', background: 'var(--accent-color)', color: 'var(--accent-text)', fontSize: '0.65rem', fontWeight: 700, minWidth: '16px', height: '16px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 0.2rem', border: '2px solid var(--bg-secondary)' }}>
+                {Object.values(unreadCounts).reduce((a, b) => a + b, 0) > 99 ? '99+' : Object.values(unreadCounts).reduce((a, b) => a + b, 0)}
+              </div>
+            )}
+          </div>
+          <span>{t('nav_chat' as TranslationKey)}</span>
         </button>
         <button onClick={() => setActiveTab('analytics')} style={navBtnStyle(activeTab === 'analytics')}>
           <BarChart2 size={20} />

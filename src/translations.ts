@@ -7,6 +7,22 @@ export const translations = {
     nav_stats: "Stats",
     nav_friends: "Friends",
     nav_profile: "Profile",
+    nav_chat: "Chat",
+
+    // Chat Tab
+    chat_title: "Chats",
+    chat_global_room: "Global Room",
+    chat_type_message: "Type a message...",
+    chat_send: "Send",
+    chat_no_messages: "No messages yet.",
+    chat_private_with: "Chat with",
+    chat_reply: "Reply",
+    chat_edit: "Edit",
+    chat_delete: "Delete",
+    chat_editing: "Editing message...",
+    chat_replying_to: "Replying to",
+    chat_edited_mark: "(edited)",
+
 
     // Friends Tab
     friends_title: "Friends",
@@ -22,6 +38,7 @@ export const translations = {
     subject_homework: "Subject Homework",
     suggest_homework: "Suggest Homework",
     hw_tab_new: "Upcoming",
+    hw_tab_pending: "Not Started",
     hw_tab_urgent: "Urgent",
     hw_tab_overdue: "Overdue",
     hw_tab_completed: "Completed",
@@ -39,6 +56,7 @@ export const translations = {
     // Home Tab
     home_welcome_back: "Welcome back,",
     home_todays_classes: "Today's Classes",
+    home_homework: "My Homework",
     home_urgent_homework: "Urgent Homework",
     home_all_caught_up: "All caught up! ✨",
     home_no_classes: "No classes today! 🎉",
@@ -92,6 +110,22 @@ export const translations = {
     nav_stats: "สถิติ",
     nav_friends: "เพื่อน",
     nav_profile: "โปรไฟล์",
+    nav_chat: "แชท",
+
+    // Chat Tab
+    chat_title: "แชท",
+    chat_global_room: "ห้องรวม",
+    chat_type_message: "พิมพ์ข้อความ...",
+    chat_send: "ส่ง",
+    chat_no_messages: "ยังไม่มีข้อความ",
+    chat_private_with: "แชทกับ",
+    chat_reply: "ตอบกลับ",
+    chat_edit: "แก้ไข",
+    chat_delete: "ลบ",
+    chat_editing: "กำลังแก้ไขข้อความ...",
+    chat_replying_to: "ตอบกลับ",
+    chat_edited_mark: "(แก้ไขแล้ว)",
+
 
     // Friends Tab
     friends_title: "เพื่อน",
@@ -107,7 +141,8 @@ export const translations = {
     subject_homework: "การบ้านรายวิชา",
     suggest_homework: "เสนอการบ้าน",
     hw_tab_new: "ใหม่",
-    hw_tab_urgent: "ใกล้เลยกำหนด",
+    hw_tab_pending: "ยังไม่ทำ",
+    hw_tab_urgent: "ใกล้กำหนดส่ง",
     hw_tab_overdue: "เลยกำหนด",
     hw_tab_completed: "เสร็จแล้ว",
     hw_no_homework_in_tab: "ไม่มีการบ้านในหมวดหมู่นี้ 🎉",
@@ -124,6 +159,7 @@ export const translations = {
     // Home Tab
     home_welcome_back: "ยินดีต้อนรับกลับ,",
     home_todays_classes: "คาบเรียนวันนี้",
+    home_homework: "การบ้านของฉัน",
     home_urgent_homework: "การบ้านด่วน",
     home_all_caught_up: "เสร็จหมดแล้ว! ✨",
     home_no_classes: "วันนี้ไม่มีเรียน! 🎉",
@@ -177,6 +213,22 @@ export const translations = {
     nav_stats: "统计",
     nav_friends: "朋友",
     nav_profile: "个人资料",
+    nav_chat: "聊天",
+
+    // Chat Tab
+    chat_title: "聊天",
+    chat_global_room: "公共聊天室",
+    chat_type_message: "输入消息...",
+    chat_send: "发送",
+    chat_no_messages: "暂无消息",
+    chat_private_with: "与...聊天",
+    chat_reply: "回复",
+    chat_edit: "编辑",
+    chat_delete: "删除",
+    chat_editing: "编辑消息...",
+    chat_replying_to: "回复给",
+    chat_edited_mark: "(已编辑)",
+
 
     // Friends Tab
     friends_title: "朋友",
@@ -192,6 +244,7 @@ export const translations = {
     subject_homework: "科目作业",
     suggest_homework: "建议作业",
     hw_tab_new: "新作业",
+    hw_tab_pending: "未开始",
     hw_tab_urgent: "紧急",
     hw_tab_overdue: "已逾期",
     hw_tab_completed: "已完成",
@@ -209,6 +262,7 @@ export const translations = {
     // Home Tab
     home_welcome_back: "欢迎回来,",
     home_todays_classes: "今日课程",
+    home_homework: "我的作业",
     home_urgent_homework: "紧急作业",
     home_all_caught_up: "全部完成！✨",
     home_no_classes: "今天没课！🎉",
