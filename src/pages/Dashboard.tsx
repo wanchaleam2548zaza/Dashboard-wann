@@ -1135,7 +1135,23 @@ export function Dashboard({ user }: DashboardProps) {
                               </div>
                             )}
                             <div>
-                              {msg.text}
+                              {msg.text.startsWith('[HW_SHARE:') ? (() => {
+                                const hwId = msg.text.replace('[HW_SHARE:', '').replace(']', '').trim();
+                                const hw = homeworkList.find((h: any) => h.id === hwId);
+                                if (!hw) return <div style={{ fontStyle: 'italic', opacity: 0.8 }}>Shared homework not found.</div>;
+                                const subject = subjectList.find(s => s.id === hw.subjectId);
+                                return (
+                                  <div onClick={() => setSelectedHomework(hw)} style={{ cursor: 'pointer', background: isMe ? 'rgba(255,255,255,0.1)' : 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '0.75rem', padding: '0.75rem', marginTop: '0.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: isMe ? 'var(--accent-text)' : 'var(--text-secondary)' }}>
+                                      <BookOpen size={16} />
+                                      <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{subject?.name || t('form_select_subject' as TranslationKey)}</span>
+                                    </div>
+                                    <div style={{ fontWeight: 600, fontSize: '0.95rem', color: isMe ? 'var(--accent-text)' : 'var(--text-primary)' }}>{hw.title}</div>
+                                    <div style={{ fontSize: '0.8rem', opacity: 0.8, color: isMe ? 'var(--accent-text)' : 'var(--text-secondary)' }}>Due: {new Date(hw.dueDate).toLocaleDateString()}</div>
+                                    <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: isMe ? 'var(--accent-text)' : 'var(--accent-color)', fontWeight: 600, textDecoration: 'underline' }}>Tap to view details</div>
+                                  </div>
+                                );
+                              })() : msg.text}
                               {msg.isEdited && <span style={{ fontSize: '0.7rem', opacity: 0.6, marginLeft: '0.5rem' }}>({t('chat_edited_mark' as TranslationKey)})</span>}
                             </div>
                           </div>
@@ -1899,9 +1915,7 @@ export function Dashboard({ user }: DashboardProps) {
               </button>
               <button 
                 onClick={() => { 
-                  const subjectName = subjectList.find(s => s.id === selectedHomework.subjectId)?.name || t('form_select_subject' as TranslationKey);
-                  const dueDate = new Date(selectedHomework.dueDate).toLocaleDateString();
-                  setChatInput(`Check out this homework!\n📚 ${subjectName}\n📝 ${selectedHomework.title}\n⏰ Due: ${dueDate}`);
+                  setChatInput(`[HW_SHARE:${selectedHomework.id}]`);
                   setSelectedHomework(null);
                   setActiveChatId(null);
                   setActiveTab('chat');
