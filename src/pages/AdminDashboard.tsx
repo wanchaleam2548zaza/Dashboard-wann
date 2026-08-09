@@ -392,26 +392,37 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
 
           {activeTab === 'overview' && (
             <div style={{ width: '100%', maxWidth: '1200px', display: 'flex', flexDirection: 'column', gap: '2rem' }} className="animate-fade-in">
-              <Card style={{ padding: '1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <h3 style={{ fontSize: '1.125rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Users size={20} /> User Presence
+              <Card style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', maxHeight: '400px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                  <h3 style={{ fontSize: '1.125rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
+                    <Users size={20} color="var(--accent-color)" /> User Presence
                   </h3>
-                  <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
                     {userList.filter(u => u.isOnline).length} Online / {userList.length} Total
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem', maxHeight: '400px', overflowY: 'auto' }}>
-                  {dbError && <div style={{ color: '#ef4444', gridColumn: '1 / -1' }}>{dbError}</div>}
+                <div style={{ 
+                  display: 'flex', flexDirection: 'column', 
+                  background: 'var(--bg-secondary)', 
+                  borderRadius: '12px', 
+                  overflowY: 'auto',
+                  border: '1px solid var(--border-color)',
+                  flex: 1
+                }}>
+                  {dbError && <div style={{ color: '#ef4444', padding: '1rem' }}>{dbError}</div>}
                   {userList.length === 0 && !dbError ? (
-                    <p style={{ color: 'var(--text-secondary)', gridColumn: '1 / -1' }}>No users found.</p>
+                    <p style={{ color: 'var(--text-secondary)', padding: '1rem' }}>No users found.</p>
                   ) : (
-                    userList.map(user => (
-                      <div key={user.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
-                        <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>{user.username}</span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', color: user.isOnline ? '#10b981' : '#ef4444' }}>
-                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: user.isOnline ? '#10b981' : '#ef4444' }} />
+                    userList.map((user, idx) => (
+                      <div key={user.id} style={{ 
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
+                        padding: '0.875rem 1rem', 
+                        borderBottom: idx === userList.length - 1 ? 'none' : '1px solid var(--border-color)'
+                      }}>
+                        <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-primary)' }}>{user.username}</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', color: user.isOnline ? '#34c759' : 'var(--text-secondary)' }}>
+                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: user.isOnline ? '#34c759' : 'var(--text-secondary)' }} />
                           {user.isOnline ? 'Online' : 'Offline'}
                         </span>
                       </div>
@@ -422,64 +433,71 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
 
               {/* Weekly Schedule Overview */}
               <Card style={{ padding: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.125rem', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Calendar size={20} /> Weekly Schedule Overview
+                <h3 style={{ fontSize: '1.125rem', margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
+                  <Calendar size={20} color="var(--accent-color)" /> Weekly Schedule Overview
                 </h3>
 
                 <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(7, minmax(120px, 1fr))',
-                  gap: '0.5rem',
+                  display: 'flex',
+                  gap: '1rem',
                   overflowX: 'auto',
-                  paddingBottom: '0.5rem'
+                  paddingBottom: '1rem',
+                  scrollSnapType: 'x mandatory'
                 }}>
                   {daysOfWeek.map(day => {
                     const daySubjects = groupedSubjects[day] || [];
                     return (
-                      <div key={day} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <div key={day} style={{ 
+                        display: 'flex', flexDirection: 'column', gap: '0.5rem', 
+                        minWidth: '240px', scrollSnapAlign: 'start',
+                        background: 'var(--bg-secondary)',
+                        borderRadius: '16px',
+                        border: '1px solid var(--border-color)',
+                        padding: '1rem'
+                      }}>
                         <div style={{
-                          textAlign: 'center',
                           fontWeight: 600,
-                          padding: '0.25rem 0.5rem',
-                          fontSize: '0.75rem',
-                          textTransform: 'uppercase',
-                          background: 'var(--bg-primary)',
-                          borderBottom: '2px solid var(--accent-color)',
-                          borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0',
+                          fontSize: '0.95rem',
                           display: 'flex',
                           justifyContent: 'space-between',
-                          alignItems: 'center'
+                          alignItems: 'center',
+                          marginBottom: '0.75rem',
+                          color: 'var(--text-primary)'
                         }}>
-                          <span>{day.substring(0, 3)}</span>
-                          <button onClick={() => setQuickAddSubjectDay(day)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-color)', padding: 0, display: 'flex' }} title={`Add Subject to ${day}`}>
-                            <PlusCircle size={14} />
+                          <span>{day}</span>
+                          <button onClick={() => setQuickAddSubjectDay(day)} style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', cursor: 'pointer', color: 'var(--accent-color)', padding: '0.35rem', display: 'flex', borderRadius: '50%', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }} title={`Add Subject to ${day}`}>
+                            <PlusCircle size={16} />
                           </button>
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1 }}>
                           {daySubjects.length === 0 ? (
-                            <div style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-secondary)', padding: '0.5rem 0' }}>-</div>
+                            <div style={{ textAlign: 'center', fontSize: '0.875rem', color: 'var(--text-secondary)', padding: '1rem 0', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>No classes</div>
                           ) : (
                             daySubjects.map(subject => (
                               <div key={subject.id}
                                 onClick={() => { setQuickEditSubject(subject); setActiveTab('subject-details'); }}
                                 style={{
-                                  padding: '0.6rem 0.5rem',
+                                  padding: '0.875rem',
                                   background: 'var(--bg-primary)',
-                                  border: '1px solid var(--border-color)',
-                                  borderRadius: 'var(--radius-sm)',
+                                  borderRadius: '12px',
                                   display: 'flex',
                                   flexDirection: 'column',
-                                  gap: '0.25rem',
+                                  gap: '0.35rem',
                                   cursor: 'pointer',
-                                  transition: 'border-color 0.2s'
+                                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                                  transition: 'transform 0.2s',
+                                  border: '1px solid var(--border-color)'
                                 }}
-                                onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent-color)'}
-                                onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
+                                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
                                 title="Click to view/edit homework"
                               >
-                                <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.75rem', lineHeight: '1.2' }}>{subject.name}</div>
-                                <div style={{ color: 'var(--accent-color)', fontWeight: 500, fontSize: '0.65rem' }}>{subject.startTime} - {subject.endTime}</div>
+                                <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.875rem', lineHeight: '1.2' }}>{subject.name}</div>
+                                <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
+                                  <span>{subject.startTime} - {subject.endTime}</span>
+                                  <span style={{ fontWeight: 500 }}>{subject.room}</span>
+                                </div>
                               </div>
                             ))
                           )}
@@ -716,24 +734,36 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
 
                 {/* Existing Homework for this subject */}
                 <Card style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
-                  <h4 style={{ marginBottom: '1rem', fontSize: '1.125rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <CheckSquare size={20} /> Existing Homework
+                  <h4 style={{ marginBottom: '1.25rem', fontSize: '1.125rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
+                    <CheckSquare size={20} color="var(--accent-color)" /> Existing Homework
                   </h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', overflowY: 'auto', flex: 1, maxHeight: '500px' }}>
+                  <div style={{ 
+                    display: 'flex', flexDirection: 'column', 
+                    background: 'var(--bg-secondary)', 
+                    borderRadius: '12px', 
+                    overflowY: 'auto',
+                    border: '1px solid var(--border-color)',
+                    flex: 1, 
+                    maxHeight: '500px' 
+                  }}>
                     {(() => {
                       const subjectHomework = groupedHomework[quickEditSubject.id] || [];
-                      if (subjectHomework.length === 0) return <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>No homework assigned.</p>;
-                      return subjectHomework.map(hw => (
-                        <div key={hw.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+                      if (subjectHomework.length === 0) return <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', padding: '1.5rem', textAlign: 'center' }}>No homework assigned.</p>;
+                      return subjectHomework.map((hw, idx) => (
+                        <div key={hw.id} style={{ 
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+                          padding: '1rem', 
+                          borderBottom: idx === subjectHomework.length - 1 ? 'none' : '1px solid var(--border-color)'
+                        }}>
                           <div>
-                            <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{hw.title}</div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                              <Calendar size={12} /> Due: {new Date(hw.dueDate).toLocaleDateString()}
+                            <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-primary)' }}>{hw.title}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                              <Calendar size={12} color="var(--accent-color)" /> Due: <strong style={{ color: 'var(--text-primary)' }}>{new Date(hw.dueDate).toLocaleDateString()}</strong>
                             </div>
                           </div>
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <button onClick={() => { setHwTitle(hw.title); setHwDueDate(hw.dueDate); setEditingHomeworkId(hw.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }} title="Edit"><Pencil size={14} /></button>
-                            <button onClick={() => handleDeleteHomework(hw.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }} title="Delete"><Trash2 size={14} /></button>
+                          <div style={{ display: 'flex', gap: '0.75rem' }}>
+                            <button onClick={() => { setHwTitle(hw.title); setHwDueDate(hw.dueDate); setEditingHomeworkId(hw.id); }} style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--accent-color)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'} title="Edit"><Pencil size={14} /></button>
+                            <button onClick={() => handleDeleteHomework(hw.id)} style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-primary)'} title="Delete"><Trash2 size={14} /></button>
                           </div>
                         </div>
                       ));
@@ -747,50 +777,49 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
           {activeTab === 'analytics' && (
             <div style={{ width: '100%', maxWidth: '1000px', display: 'flex', flexDirection: 'column', gap: '2rem' }} className="animate-fade-in">
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-
-                <Card style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Assignments</div>
+                <Card style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'linear-gradient(135deg, var(--bg-primary), var(--bg-secondary))' }}>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Assignments</div>
                   <div style={{ fontSize: '2.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>{totalHomework}</div>
                 </Card>
 
-                <Card style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Due This Week</div>
-                  <div style={{ fontSize: '2.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>{hwDueThisWeek}</div>
+                <Card style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'linear-gradient(135deg, var(--bg-primary), var(--bg-secondary))' }}>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Due This Week</div>
+                  <div style={{ fontSize: '2.5rem', fontWeight: 700, color: 'var(--accent-color)' }}>{hwDueThisWeek}</div>
                 </Card>
 
-                <Card style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Most Active Subject</div>
+                <Card style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'linear-gradient(135deg, var(--bg-primary), var(--bg-secondary))' }}>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Most Active Subject</div>
                   <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>
                     {mostActiveSubject ? mostActiveSubject.name : 'N/A'}
                   </div>
-                  {mostActiveSubject && <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{mostActiveSubject.count} assignments</div>}
+                  {mostActiveSubject && <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{mostActiveSubject.count} assignments</div>}
                 </Card>
               </div>
 
-              <Card style={{ padding: '2rem' }}>
-                <h3 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem' }}>
-                  <BarChart2 size={20} /> Homework Distribution by Subject
+              <Card style={{ padding: '1.5rem' }}>
+                <h3 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.125rem', fontWeight: 600 }}>
+                  <BarChart2 size={20} color="var(--accent-color)" /> Homework Distribution
                 </h3>
 
                 {subjectHwCounts.length === 0 ? (
-                  <p style={{ color: 'var(--text-secondary)', margin: 0 }}>No subjects available for analysis.</p>
+                  <p style={{ color: 'var(--text-secondary)', margin: 0, padding: '1rem', textAlign: 'center' }}>No subjects available for analysis.</p>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginTop: '1.5rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginTop: '1rem' }}>
                     {subjectHwCounts.map((subject) => {
                       const maxCount = Math.max(...subjectHwCounts.map(s => s.count));
                       const percentage = maxCount === 0 ? 0 : (subject.count / maxCount) * 100;
                       return (
-                        <div key={subject.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <div key={subject.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem' }}>
                             <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{subject.name}</span>
                             <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{subject.count} assignments</span>
                           </div>
-                          <div style={{ width: '100%', height: '8px', background: 'var(--bg-primary)', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                          <div style={{ width: '100%', height: '8px', background: 'var(--bg-secondary)', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
                             <div style={{
                               width: `${percentage}%`,
                               height: '100%',
                               background: 'var(--accent-color)',
-                              borderRadius: '4px',
+                              borderRadius: '12px',
                               transition: 'width 0.5s ease-out'
                             }} />
                           </div>
@@ -798,29 +827,41 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                       );
                     })}
                   </div>
+
                 )}
               </Card>
             </div>
           )}
 
           {activeTab === 'notifications' && (
-            <div style={{ width: '100%', maxWidth: '1000px', display: 'flex', flexDirection: 'column', gap: '2rem' }} className="animate-fade-in">
-              <Card style={{ padding: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.25rem', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Bell size={24} /> Homework Requests
+            <div style={{ width: '100%', maxWidth: '900px', display: 'flex', flexDirection: 'column', gap: '2rem' }} className="animate-fade-in">
+              <Card style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', maxHeight: '700px' }}>
+                <h3 style={{ fontSize: '1.125rem', margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
+                  <Bell size={22} color="var(--accent-color)" /> Homework Requests
                 </h3>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ 
+                  display: 'flex', flexDirection: 'column', 
+                  background: 'var(--bg-secondary)', 
+                  borderRadius: '12px', 
+                  overflowY: 'auto',
+                  border: '1px solid var(--border-color)',
+                  flex: 1
+                }}>
                   {homeworkRequests.length === 0 ? (
-                    <p style={{ color: 'var(--text-secondary)' }}>No notifications.</p>
+                    <p style={{ color: 'var(--text-secondary)', padding: '1.5rem', textAlign: 'center' }}>No notifications.</p>
                   ) : (
-                    homeworkRequests.map(req => {
+                    homeworkRequests.map((req, idx) => {
                       const subject = subjectList.find(s => s.id === req.subjectId);
                       return (
-                        <div key={req.id} style={{ padding: '1.25rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+                        <div key={req.id} style={{ 
+                          padding: '1rem', 
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem',
+                          borderBottom: idx === homeworkRequests.length - 1 ? 'none' : '1px solid var(--border-color)'
+                        }}>
                           <div>
-                            <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem', fontSize: '1rem' }}>{req.title}</div>
-                            <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+                            <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem', fontSize: '0.95rem' }}>{req.title}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
                               <span>Suggested by: <strong style={{ color: 'var(--text-primary)' }}>{req.username}</strong></span>
                               <span>Subject: <strong style={{ color: 'var(--text-primary)' }}>{subject ? subject.name : 'Unknown'}</strong></span>
                               <span>Due: <strong style={{ color: 'var(--text-primary)' }}>{new Date(req.dueDate).toLocaleDateString()}</strong></span>
@@ -829,14 +870,14 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
 
                           {req.status === 'pending' ? (
                             <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
-                              <Button onClick={() => handleApproveRequest(req)} style={{ padding: '0.5rem 1rem', background: '#10b981', color: 'white', border: 'none', width: 'auto' }}>Approve</Button>
-                              <Button onClick={() => handleDenyRequest(req)} variant="secondary" style={{ padding: '0.5rem 1rem', color: '#ef4444', border: '1px solid #ef4444', width: 'auto' }}>Deny</Button>
+                              <Button onClick={() => handleApproveRequest(req)} style={{ padding: '0.4rem 1rem', background: '#34c759', color: 'white', border: 'none', width: 'auto', borderRadius: '100px', fontSize: '0.875rem', fontWeight: 600, boxShadow: '0 2px 4px rgba(52, 199, 89, 0.2)' }}>Approve</Button>
+                              <Button onClick={() => handleDenyRequest(req)} variant="secondary" style={{ padding: '0.4rem 1rem', color: '#ff3b30', background: 'rgba(255, 59, 48, 0.1)', border: 'none', width: 'auto', borderRadius: '100px', fontSize: '0.875rem', fontWeight: 600 }}>Deny</Button>
                             </div>
                           ) : (
                             <div style={{
-                              fontSize: '0.875rem', fontWeight: 600, padding: '0.35rem 0.75rem', borderRadius: 'var(--radius-xl)',
-                              background: req.status === 'approved' ? '#10b98120' : '#ef444420',
-                              color: req.status === 'approved' ? '#10b981' : '#ef4444',
+                              fontSize: '0.75rem', fontWeight: 600, padding: '0.35rem 0.75rem', borderRadius: '100px',
+                              background: req.status === 'approved' ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 59, 48, 0.1)',
+                              color: req.status === 'approved' ? '#34c759' : '#ff3b30',
                               textTransform: 'capitalize',
                               flexShrink: 0
                             }}>
