@@ -910,7 +910,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                             {subjects.map(s => (
                               <div key={s.id} onClick={() => { setQuickEditSubject(s); setActiveTab('subject-details'); setShowSearch(false); setSearchQuery(''); }} style={{ padding: '1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                   <BookOpen size={20} color="var(--accent-color)" />
                                 </div>
                                 <div>
@@ -938,7 +938,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                                     setSearchQuery('');
                                   }
                                 }} style={{ padding: '1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                     <CheckSquare size={20} color="#10b981" />
                                   </div>
                                   <div>
