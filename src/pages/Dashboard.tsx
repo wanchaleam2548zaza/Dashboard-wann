@@ -5,7 +5,7 @@ import { doc, updateDoc, setDoc, collection, onSnapshot, addDoc, query, where, d
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
-import { LogOut, Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft, Camera, Trash2, Lock, Eye, EyeOff, Users, Edit2, Check, Globe, MessageSquare, Send, CornerUpLeft } from 'lucide-react';
+import { LogOut, Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft, Camera, Trash2, Lock, Eye, EyeOff, Edit2, Check, Globe, MessageSquare, Send, CornerUpLeft } from 'lucide-react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { useLanguage } from '../contexts/LanguageContext';
 import type { TranslationKey } from '../translations';
@@ -937,51 +937,65 @@ export function Dashboard({ user }: DashboardProps) {
         {activeTab === 'chat' && (
           <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100dvh - 190px)', position: 'relative' }}>
             {!activeChatId ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <h2 style={{ fontSize: '1.25rem', margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <MessageSquare size={22} color="var(--accent-color)" /> {t('chat_title' as TranslationKey)}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <h2 style={{ fontSize: '1.5rem', margin: '0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}>
+                  {t('chat_title' as TranslationKey)}
                 </h2>
-                <div 
-                  onClick={() => setActiveChatId('global')}
-                  style={{ 
-                    display: 'flex', alignItems: 'center', gap: '1rem', 
-                    padding: '1rem', background: 'var(--bg-secondary)', 
-                    border: '1px solid var(--border-color)', borderRadius: '12px', 
-                    cursor: 'pointer', marginBottom: '1rem',
-                    transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
-                >
-                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'var(--accent-color)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Globe size={24} color="#fff" />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '1.05rem', marginBottom: '0.15rem' }}>{t('chat_global_room' as TranslationKey)}</div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Chat with everyone</div>
+
+                {/* Active Now (Horizontal Scroll) */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0.5rem', fontWeight: 600 }}>Active Now</h3>
+                  <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', padding: '0.5rem', margin: '0 -0.5rem', scrollbarWidth: 'none' }}>
+                    {userList.filter(u => u.isOnline).map(u => (
+                      <div key={u.id} onClick={() => startPrivateChat(u.id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', cursor: 'pointer', flexShrink: 0 }}>
+                        <div style={{ position: 'relative' }}>
+                          <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--bg-secondary)', border: '2px solid var(--accent-color)', overflow: 'hidden', padding: '2px' }}>
+                            <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)' }}>
+                              {u.avatarUrl ? <img src={u.avatarUrl} alt={u.displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <UserCircle size={32} color="var(--text-secondary)" />}
+                            </div>
+                          </div>
+                          <div style={{ position: 'absolute', bottom: '2px', right: '2px', width: '14px', height: '14px', borderRadius: '50%', background: '#34c759', border: '3px solid var(--bg-primary)' }} />
+                        </div>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-primary)', maxWidth: '64px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {u.displayName || u.username || u.id}
+                        </span>
+                      </div>
+                    ))}
+                    {userList.filter(u => u.isOnline).length === 0 && (
+                       <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', padding: '1rem 0' }}>No friends active right now.</div>
+                    )}
                   </div>
                 </div>
 
-                <h3 style={{ fontSize: '1rem', margin: '0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Users size={18} color="var(--text-secondary)" /> {t('friends_title' as TranslationKey)} ({userList.filter(u => u.isOnline).length} {t('friends_online' as TranslationKey)})
-                </h3>
-                
-                {userList.length === 0 ? (
-                  <Card style={{ padding: '2rem', textAlign: 'center', background: 'var(--bg-secondary)' }}>
-                    <p style={{ color: 'var(--text-secondary)', margin: 0 }}>{t('friends_no_students' as TranslationKey)}</p>
-                  </Card>
-                ) : (
-                  <div style={{ 
-                    display: 'flex', flexDirection: 'column', 
-                    background: 'var(--bg-secondary)', 
-                    borderRadius: '12px', 
-                    border: '1px solid var(--border-color)',
-                    overflow: 'hidden',
-                    marginBottom: '2rem'
-                  }}>
+                {/* Combined Chat List (Global + Friends) */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0.5rem', fontWeight: 600 }}>Messages</h3>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--bg-secondary)', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                    
+                    {/* Global Room */}
+                    <div 
+                      onClick={() => setActiveChatId('global')}
+                      style={{ 
+                        display: 'flex', alignItems: 'center', gap: '1rem', 
+                        padding: '1rem', cursor: 'pointer', borderBottom: '1px solid var(--border-color)',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-primary)'}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-color), #818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Globe size={24} color="#fff" />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '1rem' }}>{t('chat_global_room' as TranslationKey)}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Chat with everyone</div>
+                      </div>
+                    </div>
+
+                    {/* Friends Chats */}
                     {userList.map((u, idx) => {
                       const name = u.displayName || u.username || u.id;
-                      const hasDisplayName = !!u.displayName && u.displayName !== u.username;
                       const chatId = [user.uid, u.id].sort().join('_');
                       const unread = unreadCounts[chatId] || 0;
                       return (
@@ -990,50 +1004,37 @@ export function Dashboard({ user }: DashboardProps) {
                           onClick={() => startPrivateChat(u.id)} 
                           style={{ 
                             display: 'flex', alignItems: 'center', gap: '1rem', 
-                            padding: '0.875rem 1rem', 
-                            cursor: 'pointer',
+                            padding: '1rem', cursor: 'pointer',
                             borderBottom: idx === userList.length - 1 ? 'none' : '1px solid var(--border-color)',
-                            transition: 'background-color 0.2s ease'
+                            transition: 'background-color 0.2s'
                           }}
                           onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-primary)'}
                           onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                         >
                           <div style={{ position: 'relative', flexShrink: 0 }}>
-                            <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              {u.avatarUrl ? (
-                                <img src={u.avatarUrl} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              ) : (
-                                <UserCircle size={26} color="var(--text-secondary)" />
-                              )}
+                            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {u.avatarUrl ? <img src={u.avatarUrl} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <UserCircle size={28} color="var(--text-secondary)" />}
                             </div>
-                            <div style={{ position: 'absolute', bottom: '0px', right: '0px', width: '12px', height: '12px', borderRadius: '50%', background: u.isOnline ? '#34c759' : 'var(--text-secondary)', border: '2px solid var(--bg-secondary)' }} />
+                            {u.isOnline && <div style={{ position: 'absolute', bottom: '2px', right: '2px', width: '12px', height: '12px', borderRadius: '50%', background: '#34c759', border: '2px solid var(--bg-secondary)' }} />}
                           </div>
                           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                            <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.95rem' }}>
-                              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {name}
-                                {hasDisplayName && u.username && (
-                                  <span style={{ fontWeight: 400, color: 'var(--text-secondary)', fontSize: '0.75rem', marginLeft: '0.4rem' }}>
-                                    @{u.username}
-                                  </span>
-                                )}
-                              </span>
+                            <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
                               {unread > 0 && (
                                 <div style={{ background: 'var(--accent-color)', color: 'var(--accent-text)', fontSize: '0.75rem', fontWeight: 600, minWidth: '20px', height: '20px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 0.4rem', flexShrink: 0 }}>
                                   {unread > 99 ? '99+' : unread}
                                 </div>
                               )}
                             </div>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {u.isOnline ? t('friends_status_online' as TranslationKey) : t('friends_status_offline' as TranslationKey)}
                             </div>
                           </div>
-                          <MessageSquare size={18} color="var(--border-color)" />
                         </div>
                       );
                     })}
                   </div>
-                )}
+                </div>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -1053,42 +1054,55 @@ export function Dashboard({ user }: DashboardProps) {
                   </div>
                 </div>
                 
-                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.4rem', paddingBottom: '1rem', scrollbarWidth: 'none' }}>
+                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.2rem', padding: '1rem 0', scrollbarWidth: 'none' }}>
                   {chatMessages.length === 0 ? (
                     <div style={{ margin: 'auto', color: 'var(--text-secondary)' }}>{t('chat_no_messages' as TranslationKey)}</div>
                   ) : (
-                    chatMessages.map(msg => {
+                    chatMessages.map((msg, idx) => {
                       const isMe = msg.senderId === user.uid;
                       const isActive = activeMessageId === msg.id;
+                      const prevMsg = idx > 0 ? chatMessages[idx - 1] : null;
+                      const nextMsg = idx < chatMessages.length - 1 ? chatMessages[idx + 1] : null;
+                      const isFirstInGroup = !prevMsg || prevMsg.senderId !== msg.senderId;
+                      const isLastInGroup = !nextMsg || nextMsg.senderId !== msg.senderId;
+
                       return (
-                        <div key={msg.id} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '80%', display: 'flex', flexDirection: 'column' }}>
-                          {!isMe && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.2rem', marginLeft: '0.5rem' }}>{msg.senderName}</div>}
+                        <div key={msg.id} style={{ 
+                          alignSelf: isMe ? 'flex-end' : 'flex-start', 
+                          maxWidth: '75%', 
+                          display: 'flex', 
+                          flexDirection: 'column',
+                          marginTop: isFirstInGroup && idx > 0 ? '0.5rem' : '0'
+                        }}>
+                          {!isMe && isFirstInGroup && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.2rem', marginLeft: '0.75rem' }}>{msg.senderName}</div>}
                           
                           <div 
                             onClick={() => setActiveMessageId(isActive ? null : msg.id)}
                             style={{ 
                               background: isMe ? 'var(--accent-color)' : 'var(--bg-secondary)', 
                               color: isMe ? 'var(--accent-text)' : 'var(--text-primary)', 
-                              padding: '0.5rem 0.75rem', 
-                              borderRadius: '1rem',
-                              borderBottomRightRadius: isMe ? '0.2rem' : '1rem',
-                              borderBottomLeftRadius: !isMe ? '0.2rem' : '1rem',
+                              padding: '0.5rem 0.875rem', 
+                              borderTopLeftRadius: !isMe && !isFirstInGroup ? '0.25rem' : '1.25rem',
+                              borderBottomLeftRadius: !isMe && !isLastInGroup ? '0.25rem' : '1.25rem',
+                              borderTopRightRadius: isMe && !isFirstInGroup ? '0.25rem' : '1.25rem',
+                              borderBottomRightRadius: isMe && !isLastInGroup ? '0.25rem' : '1.25rem',
                               border: isMe ? 'none' : '1px solid var(--border-color)',
                               wordBreak: 'break-word',
                               cursor: 'pointer',
                               display: 'flex',
                               flexDirection: 'column',
                               gap: '0.25rem',
-                              fontSize: '0.875rem'
+                              fontSize: '0.95rem',
+                              lineHeight: '1.4'
                             }}
                           >
                             {msg.replyTo && (
                               <div style={{
                                 padding: '0.4rem 0.5rem',
                                 background: isMe ? 'color-mix(in srgb, var(--accent-text) 15%, transparent)' : 'color-mix(in srgb, var(--text-primary) 5%, transparent)',
-                                borderRadius: '0.25rem',
+                                borderRadius: '0.5rem',
                                 borderLeft: `3px solid ${isMe ? 'var(--accent-text)' : 'var(--border-color)'}`,
-                                fontSize: '0.7rem',
+                                fontSize: '0.75rem',
                                 marginBottom: '0.25rem',
                                 color: isMe ? 'var(--accent-text)' : 'var(--text-primary)'
                               }}>
@@ -1098,23 +1112,23 @@ export function Dashboard({ user }: DashboardProps) {
                             )}
                             <div>
                               {msg.text}
-                              {msg.isEdited && <span style={{ fontSize: '0.65rem', opacity: 0.7, marginLeft: '0.5rem' }}>{t('chat_edited_mark' as TranslationKey)}</span>}
+                              {msg.isEdited && <span style={{ fontSize: '0.7rem', opacity: 0.6, marginLeft: '0.5rem' }}>({t('chat_edited_mark' as TranslationKey)})</span>}
                             </div>
                           </div>
                           
                           {isActive && (
-                            <div className="animate-fade-in" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', alignSelf: isMe ? 'flex-end' : 'flex-start', padding: '0.4rem 0.5rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', boxShadow: 'var(--shadow-md)', zIndex: 10 }}>
-                              <button onClick={() => { setReplyingTo(msg); setActiveMessageId(null); setEditingMessage(null); document.getElementById('chat-input')?.focus(); }} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', padding: '0 0.25rem', fontWeight: 500 }}>
+                            <div className="animate-fade-in" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', alignSelf: isMe ? 'flex-end' : 'flex-start', padding: '0.4rem 0.5rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '0.75rem', boxShadow: 'var(--shadow-md)', zIndex: 10 }}>
+                              <button onClick={() => { setReplyingTo(msg); setActiveMessageId(null); setEditingMessage(null); document.getElementById('chat-input')?.focus(); }} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', padding: '0 0.25rem', fontWeight: 500 }}>
                                 <CornerUpLeft size={14} color="var(--text-secondary)" /> {t('chat_reply' as TranslationKey)}
                               </button>
                               {isMe && (
                                 <>
                                   <div style={{ width: '1px', background: 'var(--border-color)' }} />
-                                  <button onClick={() => { setEditingMessage(msg); setChatInput(msg.text); setActiveMessageId(null); setReplyingTo(null); document.getElementById('chat-input')?.focus(); }} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', padding: '0 0.25rem', fontWeight: 500 }}>
+                                  <button onClick={() => { setEditingMessage(msg); setChatInput(msg.text); setActiveMessageId(null); setReplyingTo(null); document.getElementById('chat-input')?.focus(); }} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', padding: '0 0.25rem', fontWeight: 500 }}>
                                     <Edit2 size={14} color="var(--text-secondary)" /> {t('chat_edit' as TranslationKey)}
                                   </button>
                                   <div style={{ width: '1px', background: 'var(--border-color)' }} />
-                                  <button onClick={() => { handleDeleteMessage(msg.id); setActiveMessageId(null); }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', padding: '0 0.25rem', fontWeight: 500 }}>
+                                  <button onClick={() => { handleDeleteMessage(msg.id); setActiveMessageId(null); }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', padding: '0 0.25rem', fontWeight: 500 }}>
                                     <Trash2 size={14} /> {t('chat_delete' as TranslationKey)}
                                   </button>
                                 </>
@@ -1128,9 +1142,9 @@ export function Dashboard({ user }: DashboardProps) {
                   <div ref={messagesEndRef} />
                 </div>
                 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: 'auto' }}>
+                <div style={{ position: 'relative', marginTop: 'auto', background: 'var(--bg-primary)', paddingTop: '0.5rem' }}>
                   {(replyingTo || editingMessage) && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', borderLeft: '3px solid var(--accent-color)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--bg-secondary)', borderRadius: '1rem', borderLeft: '4px solid var(--accent-color)', marginBottom: '0.5rem' }}>
                       <div style={{ fontSize: '0.875rem', overflow: 'hidden' }}>
                         {replyingTo ? (
                           <>
@@ -1144,21 +1158,21 @@ export function Dashboard({ user }: DashboardProps) {
                           </>
                         ) : null}
                       </div>
-                      <button onClick={() => { setReplyingTo(null); setEditingMessage(null); setChatInput(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.25rem' }}>
-                        <X size={16} />
+                      <button onClick={() => { setReplyingTo(null); setEditingMessage(null); setChatInput(''); }} style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.25rem', borderRadius: '50%', display: 'flex' }}>
+                        <X size={14} />
                       </button>
                     </div>
                   )}
-                  <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '0.5rem' }}>
+                  <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg-secondary)', padding: '0.35rem 0.35rem 0.35rem 1rem', borderRadius: '100px', border: '1px solid var(--border-color)', alignItems: 'center' }}>
                     <input
                       id="chat-input"
                       value={chatInput}
                       onChange={e => setChatInput(e.target.value)}
                       placeholder={t('chat_type_message' as TranslationKey)}
-                      style={{ flex: 1, padding: '0.6rem 1rem', borderRadius: 'var(--radius-full)', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', outline: 'none', fontSize: '0.875rem' }}
+                      style={{ flex: 1, border: 'none', background: 'transparent', color: 'var(--text-primary)', outline: 'none', fontSize: '0.95rem' }}
                     />
-                    <button type="submit" disabled={!chatInput.trim()} style={{ background: 'var(--accent-color)', border: 'none', width: '38px', height: '38px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-text)', cursor: chatInput.trim() ? 'pointer' : 'not-allowed', opacity: chatInput.trim() ? 1 : 0.5 }}>
-                      <Send size={18} style={{ marginLeft: '-0.1rem' }} />
+                    <button type="submit" disabled={!chatInput.trim()} style={{ background: chatInput.trim() ? 'var(--accent-color)' : 'var(--border-color)', border: 'none', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: chatInput.trim() ? 'var(--accent-text)' : 'var(--text-secondary)', cursor: chatInput.trim() ? 'pointer' : 'not-allowed', transition: 'all 0.2s' }}>
+                      <Send size={16} style={{ marginLeft: chatInput.trim() ? '-0.1rem' : '0' }} />
                     </button>
                   </form>
                 </div>
