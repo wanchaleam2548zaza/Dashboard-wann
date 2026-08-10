@@ -5,7 +5,7 @@ import { doc, updateDoc, setDoc, collection, onSnapshot, addDoc, query, where, d
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
-import { LogOut, Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft, Camera, Trash2, Lock, Eye, EyeOff, Edit2, Check, Globe, MessageSquare, Send, CornerUpLeft, Menu, Share2, ChevronDown, Sun, Cloud, CloudRain, CloudLightning, Map } from 'lucide-react';
+import { LogOut, Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft, Camera, Trash2, Lock, Eye, EyeOff, Edit2, Check, CheckCheck, Globe, MessageSquare, Send, CornerUpLeft, Menu, Share2, ChevronDown, Sun, Cloud, CloudRain, CloudLightning, Map } from 'lucide-react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { useLanguage } from '../contexts/LanguageContext';
 import type { TranslationKey } from '../translations';
@@ -170,7 +170,12 @@ export function Dashboard({ user }: DashboardProps) {
   const [canAddHomework, setCanAddHomework] = useState(false);
 
   // Chat State
-  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const activeTabRef = useRef(activeTab);
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
+
+  const [activeChatId, setActiveChatId] = useState<string | null>('global');
   const [chatMessages, setChatMessages] = useState<MessageData[]>([]);
   const [chatInput, setChatInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -180,6 +185,15 @@ export function Dashboard({ user }: DashboardProps) {
   const [replyingTo, setReplyingTo] = useState<MessageData | null>(null);
   const [isChatMenuOpen, setIsChatMenuOpen] = useState(false);
   const [roomTheme, setRoomTheme] = useState<string | null>(null);
+  
+  const [chatNotifsEnabled, setChatNotifsEnabled] = useState(() => {
+    return localStorage.getItem('chat_notifications_enabled') !== 'false';
+  });
+  const chatNotifsRef = useRef(chatNotifsEnabled);
+  useEffect(() => {
+    chatNotifsRef.current = chatNotifsEnabled;
+    localStorage.setItem('chat_notifications_enabled', chatNotifsEnabled.toString());
+  }, [chatNotifsEnabled]);
 
   useEffect(() => {
     if (!activeChatId) {
@@ -279,7 +293,7 @@ export function Dashboard({ user }: DashboardProps) {
 
   useEffect(() => {
     isFirstLoad.current = true;
-    if (activeTab === 'chat' && activeChatId) {
+    if (activeChatId) {
       const q = query(collection(db, 'messages'), where('chatId', '==', activeChatId));
       const unsub = onSnapshot(q, (snap) => {
         const msgs: MessageData[] = [];
@@ -288,8 +302,17 @@ export function Dashboard({ user }: DashboardProps) {
           snap.docChanges().forEach(change => {
             if (change.type === 'added') {
               const data = change.doc.data() as MessageData;
-              if (data.senderId !== user.uid && Notification.permission === 'granted') {
-                new Notification(`New message from ${data.senderName}`, { body: data.text });
+              if (data.senderId !== user.uid && Notification.permission === 'granted' && chatNotifsRef.current) {
+                if (document.hidden || activeTabRef.current !== 'chat') {
+                  const notification = new Notification(`New message from ${data.senderName}`, { 
+                    body: data.text,
+                    icon: '/favicon.ico' // fallback icon
+                  });
+                  notification.onclick = () => {
+                    window.focus();
+                    notification.close();
+                  };
+                }
               }
             }
           });
@@ -303,7 +326,7 @@ export function Dashboard({ user }: DashboardProps) {
       });
       return () => unsub();
     }
-  }, [activeTab, activeChatId]);
+  }, [activeChatId, user.uid]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1536,6 +1559,18 @@ export function Dashboard({ user }: DashboardProps) {
                           <option value="dark">{t('profile_theme_dark')}</option>
                           <option value="white-pink">{t('profile_theme_white_pink')}</option>
                         </select>
+                        <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)', margin: '0.5rem 0' }} />
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Bell size={14} /> Notifications
+                          </span>
+                          <input 
+                            type="checkbox" 
+                            checked={chatNotifsEnabled} 
+                            onChange={(e) => setChatNotifsEnabled(e.target.checked)} 
+                            style={{ cursor: 'pointer' }}
+                          />
+                        </div>
                       </div>
                     </>
                   )}
@@ -1617,6 +1652,10 @@ export function Dashboard({ user }: DashboardProps) {
                                 );
                               })() : msg.text}
                               {msg.isEdited && <span style={{ fontSize: '0.7rem', opacity: 0.6, marginLeft: '0.5rem' }}>({t('chat_edited_mark' as TranslationKey)})</span>}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', fontSize: '0.65rem', opacity: 0.7, marginTop: '2px' }}>
+                              {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {isMe && <CheckCheck size={12} />}
                             </div>
                           </div>
                           
