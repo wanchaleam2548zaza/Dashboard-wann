@@ -11,6 +11,15 @@ export const translations = {
     nav_overview: "Overview",
     menu_sec_a_title: "For Sec A",
 
+    home_weather_clear: "Clear sky",
+    home_weather_cloudy: "Cloudy",
+    home_weather_fog: "Fog",
+    home_weather_rain: "Rain",
+    home_weather_snow: "Snow",
+    home_weather_showers: "Showers",
+    home_weather_thunder: "Thunderstorm",
+    home_weather_unknown: "Unknown",
+
     // Chat Tab
     chat_title: "Chats",
     chat_global_room: "Global Room",
@@ -132,6 +141,15 @@ export const translations = {
     nav_overview: "ภาพรวม",
     menu_sec_a_title: "สำหรับ Sec A",
 
+    home_weather_clear: "ท้องฟ้าแจ่มใส",
+    home_weather_cloudy: "มีเมฆ",
+    home_weather_fog: "มีหมอก",
+    home_weather_rain: "ฝนตก",
+    home_weather_snow: "หิมะตก",
+    home_weather_showers: "ฝนตกปรอยๆ",
+    home_weather_thunder: "พายุฝนฟ้าคะนอง",
+    home_weather_unknown: "ไม่ทราบ",
+
     // Chat Tab
     chat_title: "แชท",
     chat_global_room: "ห้องรวม",
@@ -252,6 +270,15 @@ export const translations = {
     nav_chat: "聊天",
     nav_overview: "概览",
     menu_sec_a_title: "对于 Sec A",
+
+    home_weather_clear: "晴天",
+    home_weather_cloudy: "多云",
+    home_weather_fog: "有雾",
+    home_weather_rain: "下雨",
+    home_weather_snow: "下雪",
+    home_weather_showers: "阵雨",
+    home_weather_thunder: "雷暴",
+    home_weather_unknown: "未知",
 
     // Chat Tab
     chat_title: "聊天",

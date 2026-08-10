@@ -5,7 +5,7 @@ import { doc, updateDoc, setDoc, collection, onSnapshot, addDoc, query, where, d
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
-import { LogOut, Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft, Camera, Trash2, Lock, Eye, EyeOff, Edit2, Check, Globe, MessageSquare, Send, CornerUpLeft, Menu, Share2, ChevronDown, Sun, Cloud, CloudRain, CloudLightning, Map, Navigation2 } from 'lucide-react';
+import { LogOut, Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft, Camera, Trash2, Lock, Eye, EyeOff, Edit2, Check, Globe, MessageSquare, Send, CornerUpLeft, Menu, Share2, ChevronDown, Sun, Cloud, CloudRain, CloudLightning, Map } from 'lucide-react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { useLanguage } from '../contexts/LanguageContext';
 import type { TranslationKey } from '../translations';
@@ -15,15 +15,21 @@ interface DashboardProps {
 }
 
 const getWeatherDetails = (code: number) => {
-  if (code === 0) return { icon: <Sun size={32} color="#f59e0b" />, desc: 'Clear sky' };
-  if (code >= 1 && code <= 3) return { icon: <Cloud size={32} color="#94a3b8" />, desc: 'Cloudy' };
-  if (code >= 45 && code <= 48) return { icon: <Cloud size={32} color="#cbd5e1" />, desc: 'Fog' };
-  if (code >= 51 && code <= 67) return { icon: <CloudRain size={32} color="#3b82f6" />, desc: 'Rain' };
-  if (code >= 71 && code <= 77) return { icon: <Cloud size={32} color="#e2e8f0" />, desc: 'Snow' };
-  if (code >= 80 && code <= 82) return { icon: <CloudRain size={32} color="#2563eb" />, desc: 'Showers' };
-  if (code >= 95 && code <= 99) return { icon: <CloudLightning size={32} color="#8b5cf6" />, desc: 'Thunderstorm' };
-  return { icon: <Sun size={32} color="#f59e0b" />, desc: 'Unknown' };
+  if (code === 0) return { icon: <Sun size={32} color="#f59e0b" />, descKey: 'home_weather_clear' as TranslationKey };
+  if (code >= 1 && code <= 3) return { icon: <Cloud size={32} color="#94a3b8" />, descKey: 'home_weather_cloudy' as TranslationKey };
+  if (code >= 45 && code <= 48) return { icon: <Cloud size={32} color="#cbd5e1" />, descKey: 'home_weather_fog' as TranslationKey };
+  if (code >= 51 && code <= 67) return { icon: <CloudRain size={32} color="#3b82f6" />, descKey: 'home_weather_rain' as TranslationKey };
+  if (code >= 71 && code <= 77) return { icon: <Cloud size={32} color="#e2e8f0" />, descKey: 'home_weather_snow' as TranslationKey };
+  if (code >= 80 && code <= 82) return { icon: <CloudRain size={32} color="#2563eb" />, descKey: 'home_weather_showers' as TranslationKey };
+  if (code >= 95 && code <= 99) return { icon: <CloudLightning size={32} color="#8b5cf6" />, descKey: 'home_weather_thunder' as TranslationKey };
+  return { icon: <Sun size={32} color="#f59e0b" />, descKey: 'home_weather_unknown' as TranslationKey };
 };
+
+const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
+const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
+
+const DAYS_EN = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+const DAYS_TH = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
 
 interface SubjectData {
   id: string;
@@ -41,6 +47,15 @@ interface HomeworkData {
   title: string;
   subjectId: string;
   dueDate: string;
+  createdAt: string;
+}
+
+interface CalendarEventData {
+  id: string;
+  userId: string;
+  date: string;
+  title: string;
+  color: string;
   createdAt: string;
 }
 
@@ -101,9 +116,15 @@ export function Dashboard({ user }: DashboardProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [weatherData, setWeatherData] = useState<{ temp: number, code: number } | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
-  const [userLocation, setUserLocation] = useState<{lat: number, lon: number} | null>(null);
   const [locationName, setLocationName] = useState<string>('Bangkok');
   const [hasGpsError, setHasGpsError] = useState(false);
+  
+  // Calendar Events State
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEventData[]>([]);
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [newEventTitle, setNewEventTitle] = useState('');
+  const [newEventColor, setNewEventColor] = useState('#ff3b30'); // default red
   
   const currentDayIndex = new Date().getDay(); // 0 is Sunday
   const defaultDay = currentDayIndex === 0 ? 'Sunday' : 
@@ -220,7 +241,6 @@ export function Dashboard({ user }: DashboardProps) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
-          setUserLocation({ lat: latitude, lon: longitude });
           lastLat = latitude;
           lastLon = longitude;
           setHasGpsError(false);
@@ -246,6 +266,16 @@ export function Dashboard({ user }: DashboardProps) {
       clearInterval(weatherTimer);
     };
   }, []);
+
+  // Fetch Calendar Events
+  useEffect(() => {
+    const q = query(collection(db, 'calendarEvents'), where('userId', '==', user.uid));
+    const unsub = onSnapshot(q, (snapshot) => {
+      const evts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CalendarEventData));
+      setCalendarEvents(evts);
+    });
+    return () => unsub();
+  }, [user.uid]);
 
   useEffect(() => {
     isFirstLoad.current = true;
@@ -343,6 +373,30 @@ export function Dashboard({ user }: DashboardProps) {
     const chatId = [user.uid, friendId].sort().join('_');
     setActiveChatId(chatId);
     setActiveTab('chat');
+  };
+
+  const handleAddCalendarEvent = async () => {
+    if (!newEventTitle.trim() || !selectedDate) return;
+    try {
+      await addDoc(collection(db, 'calendarEvents'), {
+        userId: user.uid,
+        date: selectedDate,
+        title: newEventTitle.trim(),
+        color: newEventColor,
+        createdAt: new Date().toISOString()
+      });
+      setNewEventTitle('');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeleteCalendarEvent = async (eventId: string) => {
+    try {
+      await deleteDoc(doc(db, 'calendarEvents', eventId));
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   // Friends / User List State
@@ -758,73 +812,241 @@ export function Dashboard({ user }: DashboardProps) {
               <p style={{ color: 'var(--text-secondary)' }}>{user.email?.replace('@dashboard.com', '')}</p>
             </div>
             
-            {/* Clock & Weather Widget */}
-            <div style={{ 
-              background: 'var(--bg-secondary)', 
-              borderRadius: '24px', 
-              padding: '2rem', 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              border: '1px solid var(--border-color)',
-              boxShadow: '0 10px 30px -10px rgba(0,0,0,0.1)',
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
-              {/* Decorative glows */}
-              <div style={{ position: 'absolute', top: '-20px', left: '-20px', width: '100px', height: '100px', background: 'var(--accent-color)', opacity: 0.15, borderRadius: '50%', filter: 'blur(30px)' }} />
-              <div style={{ position: 'absolute', bottom: '-20px', right: '-20px', width: '120px', height: '120px', background: '#3b82f6', opacity: 0.15, borderRadius: '50%', filter: 'blur(40px)' }} />
+            {/* Grid Layout Container */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
               
-              <div style={{ fontSize: '3.5rem', fontWeight: 800, letterSpacing: '-2px', color: 'var(--text-primary)', lineHeight: 1.1, marginBottom: '0.25rem', zIndex: 1 }}>
-                {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-              </div>
-              <div style={{ fontSize: '1rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '1.5rem', zIndex: 1 }}>
-                {currentTime.toLocaleDateString(t('nav_home') === 'หน้าหลัก' ? 'th-TH' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-              </div>
-              
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'var(--bg-primary)', padding: '0.75rem 1.25rem', borderRadius: '16px', zIndex: 1, border: '1px solid var(--border-color)' }}>
-                {weatherLoading ? (
-                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Loading...</div>
-                ) : weatherData ? (
-                  <>
-                    {getWeatherDetails(weatherData.code).icon}
-                    <div>
-                      <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.1 }}>
-                        {weatherData.temp}°C
+              {/* Clock & Weather Widget (Left) */}
+              <div style={{ 
+                background: 'var(--bg-secondary)', 
+                borderRadius: '24px', 
+                padding: '1.25rem', 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                border: '1px solid var(--border-color)',
+                boxShadow: '0 10px 30px -10px rgba(0,0,0,0.1)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                {/* Decorative glows */}
+                <div style={{ position: 'absolute', top: '-15px', left: '-15px', width: '70px', height: '70px', background: 'var(--accent-color)', opacity: 0.15, borderRadius: '50%', filter: 'blur(30px)' }} />
+                <div style={{ position: 'absolute', bottom: '-15px', right: '-15px', width: '90px', height: '90px', background: '#3b82f6', opacity: 0.15, borderRadius: '50%', filter: 'blur(30px)' }} />
+                
+                <div style={{ fontSize: '2.5rem', fontWeight: 800, letterSpacing: '-1.5px', color: 'var(--text-primary)', lineHeight: 1.1, marginBottom: '0.15rem', zIndex: 1 }}>
+                  {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '1rem', zIndex: 1 }}>
+                  {currentTime.toLocaleDateString(t('nav_home') === 'หน้าหลัก' ? 'th-TH' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', zIndex: 1, width: '100%' }}>
+                  {weatherLoading ? (
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', textAlign: 'center', width: '100%' }}>Loading...</div>
+                  ) : weatherData ? (
+                    <>
+                      {/* Location spanning both */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', background: 'var(--bg-primary)', padding: '0.35rem 0.5rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                        <MapPin size={12} color="var(--text-secondary)" /> 
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{locationName}</span>
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                        <MapPin size={10} /> {locationName}
+                      
+                      {/* Two Cards Row */}
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        {/* Temperature Card */}
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: 'var(--bg-primary)', padding: '0.5rem', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
+                          {getWeatherDetails(weatherData.code).icon}
+                          <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>
+                            {weatherData.temp}°C
+                          </div>
+                        </div>
+                        {/* Condition Card */}
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', padding: '0.5rem', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
+                          <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', textAlign: 'center' }}>
+                            {t(getWeatherDetails(weatherData.code).descKey)}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </>
-                ) : (
-                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Unavailable</div>
+                    </>
+                  ) : (
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', textAlign: 'center', width: '100%' }}>Unavailable</div>
+                  )}
+                </div>
+
+                {hasGpsError && (
+                  <div style={{ fontSize: '0.75rem', color: '#ff3b30', marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', zIndex: 1 }}>
+                    <Map size={14} /> {t('home_gps_error' as TranslationKey)}
+                  </div>
                 )}
               </div>
+
+              {/* Calendar Widget (Right) */}
+              <div style={{ 
+                background: 'var(--bg-secondary)', 
+                borderRadius: '24px', 
+                padding: '1rem', 
+                border: '1px solid var(--border-color)',
+                boxShadow: '0 10px 30px -10px rgba(0,0,0,0.1)',
+                display: 'flex',
+                flexDirection: 'column'
+              }}>
+                {/* Calendar Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', padding: '0 0.5rem' }}>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {currentTime.toLocaleDateString(t('nav_home') === 'หน้าหลัก' ? 'th-TH' : 'en-US', { month: 'long', year: 'numeric' })}
+                  </h3>
+                </div>
+                
+                {/* Days of week */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.15rem', marginBottom: '0.5rem' }}>
+                  {(t('nav_home') === 'หน้าหลัก' ? DAYS_TH : DAYS_EN).map((day, idx) => (
+                    <div key={idx} style={{ textAlign: 'center', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                      {day}
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Calendar Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.15rem', flex: 1, alignContent: 'start' }}>
+                  {/* Empty slots for first day */}
+                  {Array.from({ length: getFirstDayOfMonth(currentTime.getFullYear(), currentTime.getMonth()) }).map((_, i) => (
+                    <div key={`empty-${i}`} style={{ aspectRatio: '1' }} />
+                  ))}
+                  
+                  {/* Days */}
+                  {Array.from({ length: getDaysInMonth(currentTime.getFullYear(), currentTime.getMonth()) }).map((_, i) => {
+                    const day = i + 1;
+                    const isToday = day === currentTime.getDate();
+                    
+                    const yyyy = currentTime.getFullYear();
+                    const mm = String(currentTime.getMonth() + 1).padStart(2, '0');
+                    const dd = String(day).padStart(2, '0');
+                    const dateStr = `${yyyy}-${mm}-${dd}`;
+                    const dayEvents = calendarEvents.filter(e => e.date === dateStr);
+                    
+                    return (
+                      <div 
+                        key={day}
+                        onClick={() => {
+                          setSelectedDate(dateStr);
+                          setShowEventModal(true);
+                        }}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          aspectRatio: '1',
+                          borderRadius: '12px',
+                          fontWeight: isToday ? 700 : 500,
+                          color: isToday ? '#fff' : 'var(--text-primary)',
+                          background: isToday ? 'var(--accent-color)' : (dayEvents.length > 0 ? 'var(--bg-primary)' : 'transparent'),
+                          boxShadow: isToday ? '0 4px 10px rgba(0,0,0,0.1)' : 'none',
+                          cursor: 'pointer',
+                          transition: 'background-color 0.2s',
+                        }}
+                        onMouseEnter={(e) => { if (!isToday) e.currentTarget.style.backgroundColor = 'var(--bg-primary)'; }}
+                        onMouseLeave={(e) => { if (!isToday) e.currentTarget.style.backgroundColor = dayEvents.length > 0 ? 'var(--bg-primary)' : 'transparent'; }}
+                      >
+                        <span style={{ fontSize: '0.8rem', lineHeight: 1 }}>{day}</span>
+                        {dayEvents.length > 0 && (
+                          <div style={{ display: 'flex', gap: '2px', marginTop: '2px', flexWrap: 'wrap', justifyContent: 'center', maxWidth: '80%' }}>
+                            {dayEvents.slice(0, 3).map((ev, idx) => (
+                              <div key={idx} style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: ev.color }} />
+                            ))}
+                            {dayEvents.length > 3 && <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'var(--text-secondary)' }} />}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
             </div>
 
-            {/* GPS & Traffic Controls */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <button 
-                onClick={() => {
-                  if (userLocation) {
-                    window.open(`https://www.google.com/maps?q=${userLocation.lat},${userLocation.lon}&layer=t`, '_blank');
-                  } else {
-                    alert(t('home_gps_error' as TranslationKey));
-                  }
-                }}
-                className="btn btn-secondary" 
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', padding: '1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px' }}
-              >
-                <Navigation2 size={24} color="#ff3b30" />
-                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>{t('home_check_traffic' as TranslationKey)}</span>
-              </button>
-            </div>
-            
-            {hasGpsError && (
-              <div style={{ fontSize: '0.8rem', color: '#ff3b30', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
-                <Map size={14} /> {t('home_gps_error' as TranslationKey)}
+            {/* Event Modal */}
+            {showEventModal && (
+              <div style={{
+                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                background: 'rgba(0,0,0,0.5)', zIndex: 1000,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '1rem',
+                backdropFilter: 'blur(4px)'
+              }}>
+                <div style={{
+                  background: 'var(--bg-primary)',
+                  borderRadius: '24px',
+                  padding: '2rem',
+                  width: '100%',
+                  maxWidth: '400px',
+                  boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+                  border: '1px solid var(--border-color)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1.5rem'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-primary)' }}>
+                      {new Date(selectedDate).toLocaleDateString(t('nav_home') === 'หน้าหลัก' ? 'th-TH' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                    </h3>
+                    <button onClick={() => setShowEventModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                      <X size={24} />
+                    </button>
+                  </div>
+                  
+                  {/* Existing Events for the day */}
+                  {calendarEvents.filter(e => e.date === selectedDate).length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <h4 style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Events</h4>
+                      {calendarEvents.filter(e => e.date === selectedDate).map(ev => (
+                        <div key={ev.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-secondary)', padding: '0.75rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: ev.color }} />
+                            <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>{ev.title}</span>
+                          </div>
+                          <button onClick={() => handleDeleteCalendarEvent(ev.id)} style={{ background: 'none', border: 'none', color: '#ff3b30', cursor: 'pointer', padding: '0.25rem' }}>
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add New Event Form */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <h4 style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Add New Mark</h4>
+                    <Input 
+                      label="Event Title"
+                      placeholder="Title / ว่าวันอะไร..." 
+                      value={newEventTitle} 
+                      onChange={e => setNewEventTitle(e.target.value)}
+                    />
+                    
+                    <div>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Color</div>
+                      <div style={{ display: 'flex', gap: '1rem' }}>
+                        {['#ff3b30', '#34c759', '#007aff', '#ff9500', '#af52de'].map(color => (
+                          <button
+                            key={color}
+                            onClick={() => setNewEventColor(color)}
+                            style={{
+                              width: '32px', height: '32px', borderRadius: '50%',
+                              backgroundColor: color,
+                              border: newEventColor === color ? '3px solid var(--text-primary)' : 'none',
+                              cursor: 'pointer',
+                              boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    <Button onClick={handleAddCalendarEvent} disabled={!newEventTitle.trim()}>
+                      Add Mark
+                    </Button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -1464,7 +1686,7 @@ export function Dashboard({ user }: DashboardProps) {
         )}
 
         {activeTab === 'profile' && (
-          <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'center', paddingTop: '2rem', width: '100%', maxWidth: '400px', margin: '0 auto' }}>
+          <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', maxWidth: '500px', margin: '0 auto', paddingBottom: '2rem' }}>
             {profileLoading ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center', justifyContent: 'center', height: '300px' }}>
                  <div className="animate-spin" style={{ width: '32px', height: '32px', border: '3px solid var(--border-color)', borderTopColor: 'var(--accent-color)', borderRadius: '50%' }} />
@@ -1472,43 +1694,48 @@ export function Dashboard({ user }: DashboardProps) {
               </div>
             ) : (
               <>
-            {/* Header: Avatar, Name, Email */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%', marginBottom: '1rem' }}>
+            {/* Header: Cover, Avatar, Name, Email */}
+            <div style={{ position: 'relative', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.5rem' }}>
+              {/* Gradient Cover */}
+              <div style={{ width: '100%', height: '140px', background: 'linear-gradient(135deg, var(--accent-color), color-mix(in srgb, var(--accent-color) 40%, #ff3b30))', borderRadius: '0 0 24px 24px', position: 'absolute', top: '-1rem', left: 0, zIndex: 0 }} />
+              
               <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
-              <div style={{ position: 'relative' }}>
+              
+              {/* Avatar overlapping */}
+              <div style={{ position: 'relative', marginTop: '70px', zIndex: 1 }}>
                 <div 
                   onClick={() => !isUploadingAvatar && avatarInputRef.current?.click()}
-                  style={{ width: '96px', height: '96px', borderRadius: '50%', background: 'var(--bg-secondary)', border: '2px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', position: 'relative', boxShadow: 'var(--shadow-sm)' }}
+                  style={{ width: '110px', height: '110px', borderRadius: '50%', background: 'var(--bg-primary)', border: '4px solid var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', position: 'relative', boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}
                 >
                   {avatarUrl ? (
                     <img src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
-                    <UserCircle size={48} color="var(--text-secondary)" />
+                    <UserCircle size={64} color="var(--text-secondary)" />
                   )}
                   {isUploadingAvatar && (
                     <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ width: '24px', height: '24px', border: '3px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                      <div style={{ width: '28px', height: '28px', border: '3px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
                     </div>
                   )}
                 </div>
                 <button
                   onClick={() => !isUploadingAvatar && avatarInputRef.current?.click()}
-                  style={{ position: 'absolute', bottom: '2px', right: '2px', width: '28px', height: '28px', borderRadius: '50%', background: 'var(--accent-color)', border: '2px solid var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                  style={{ position: 'absolute', bottom: '0', right: '0', width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent-color)', border: '3px solid var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }}
                   title="Change photo"
                 >
-                  <Camera size={14} color="#fff" />
+                  <Camera size={16} color="#fff" />
                 </button>
               </div>
 
               {avatarUrl && (
-                <button onClick={handleDeleteAvatar} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 500, marginTop: '-0.5rem' }}>
-                  <Trash2 size={13} /> {t('profile_remove_photo')}
+                <button onClick={handleDeleteAvatar} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'none', border: 'none', color: '#ff3b30', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 500, marginTop: '0.75rem', zIndex: 1 }}>
+                  <Trash2 size={14} /> {t('profile_remove_photo')}
                 </button>
               )}
 
-              <div style={{ textAlign: 'center' }}>
-                <h2 style={{ fontSize: '1.5rem', margin: '0 0 0.25rem 0', fontWeight: 600 }}>{displayName}</h2>
-                <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.875rem' }}>{user.email} &bull; {t('profile_student_account')}</p>
+              <div style={{ textAlign: 'center', marginTop: '1rem', zIndex: 1 }}>
+                <h2 style={{ fontSize: '1.75rem', margin: '0 0 0.25rem 0', fontWeight: 700, color: 'var(--text-primary)' }}>{displayName}</h2>
+                <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.9rem', fontWeight: 500 }}>{user.email} &bull; {t('profile_student_account')}</p>
               </div>
             </div>
 
@@ -1517,7 +1744,7 @@ export function Dashboard({ user }: DashboardProps) {
               {/* Account Settings Section */}
               <div>
                 <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', marginLeft: '0.75rem', fontWeight: 600 }}>{t('profile_section_account')}</h3>
-                <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden' }}>
+                <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
                   
                   {/* Display Name Item */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', borderBottom: '1px solid var(--border-color)' }}>
@@ -1610,7 +1837,7 @@ export function Dashboard({ user }: DashboardProps) {
               <div>
                 <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', marginLeft: '0.75rem', fontWeight: 600 }}>{t('profile_section_security')}</h3>
                 {!showChangePassword ? (
-                  <div style={{ width: '100%', padding: '1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} onClick={() => setShowChangePassword(true)}>
+                  <div style={{ width: '100%', padding: '1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} onClick={() => setShowChangePassword(true)}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255, 59, 48, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Lock size={16} color="#ff3b30" />
@@ -1620,7 +1847,7 @@ export function Dashboard({ user }: DashboardProps) {
                     <ArrowLeft size={18} color="var(--text-secondary)" style={{ transform: 'rotate(180deg)' }} />
                   </div>
                 ) : (
-                  <div style={{ width: '100%', padding: '1.25rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
+                  <div style={{ width: '100%', padding: '1.25rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
                       <button onClick={() => { setShowChangePassword(false); setPwMessage(null); setOldPassword(''); setNewPassword(''); setConfirmPassword(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
                         <ArrowLeft size={20} />
@@ -1674,9 +1901,13 @@ export function Dashboard({ user }: DashboardProps) {
               </div>
             </div>
 
-            <Button variant="secondary" onClick={handleSignOut} isLoading={loading} style={{ width: '100%' }}>
-              <LogOut size={16} /> {t('profile_sign_out')}
-            </Button>
+            <button 
+              onClick={handleSignOut} 
+              disabled={loading}
+              style={{ width: '100%', padding: '1rem', marginTop: '0.5rem', borderRadius: '16px', border: '1px solid rgba(255, 59, 48, 0.3)', background: 'rgba(255, 59, 48, 0.05)', color: '#ff3b30', fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', cursor: 'pointer', transition: 'background-color 0.2s', opacity: loading ? 0.7 : 1 }}
+            >
+              <LogOut size={18} /> {t('profile_sign_out')}
+            </button>
               </>
             )}
           </div>
