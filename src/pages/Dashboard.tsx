@@ -5,7 +5,7 @@ import { doc, updateDoc, setDoc, collection, onSnapshot, addDoc, query, where, d
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
-import { LogOut, Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft, Camera, Trash2, Lock, Eye, EyeOff, Edit2, Check, Globe, MessageSquare, Send, CornerUpLeft, Menu, Share2 } from 'lucide-react';
+import { LogOut, Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft, Camera, Trash2, Lock, Eye, EyeOff, Edit2, Check, Globe, MessageSquare, Send, CornerUpLeft, Menu, Share2, ChevronDown, Sun, Cloud, CloudRain, CloudLightning, Footprints, Map, Navigation2 } from 'lucide-react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { useLanguage } from '../contexts/LanguageContext';
 import type { TranslationKey } from '../translations';
@@ -13,6 +13,28 @@ import type { TranslationKey } from '../translations';
 interface DashboardProps {
   user: FirebaseUser;
 }
+
+const getWeatherDetails = (code: number) => {
+  if (code === 0) return { icon: <Sun size={32} color="#f59e0b" />, desc: 'Clear sky' };
+  if (code >= 1 && code <= 3) return { icon: <Cloud size={32} color="#94a3b8" />, desc: 'Cloudy' };
+  if (code >= 45 && code <= 48) return { icon: <Cloud size={32} color="#cbd5e1" />, desc: 'Fog' };
+  if (code >= 51 && code <= 67) return { icon: <CloudRain size={32} color="#3b82f6" />, desc: 'Rain' };
+  if (code >= 71 && code <= 77) return { icon: <Cloud size={32} color="#e2e8f0" />, desc: 'Snow' };
+  if (code >= 80 && code <= 82) return { icon: <CloudRain size={32} color="#2563eb" />, desc: 'Showers' };
+  if (code >= 95 && code <= 99) return { icon: <CloudLightning size={32} color="#8b5cf6" />, desc: 'Thunderstorm' };
+  return { icon: <Sun size={32} color="#f59e0b" />, desc: 'Unknown' };
+};
+
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const R = 6371e3;
+  const φ1 = lat1 * Math.PI/180;
+  const φ2 = lat2 * Math.PI/180;
+  const Δφ = (lat2-lat1) * Math.PI/180;
+  const Δλ = (lon2-lon1) * Math.PI/180;
+  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+};
 
 interface SubjectData {
   id: string;
@@ -61,10 +83,14 @@ export interface MessageData {
 
 export function Dashboard({ user }: DashboardProps) {
   const { t, language, setLanguage } = useLanguage();
-  const [theme, setTheme] = useState<'system' | 'light' | 'dark'>(() => {
+  const [theme, setTheme] = useState<'system' | 'light' | 'dark' | 'white-pink'>(() => {
     return (localStorage.getItem('dashboard_theme') as any) || 'system';
   });
+  const [chatTheme, setChatTheme] = useState<'system' | 'light' | 'dark' | 'white-pink'>(() => {
+    return (localStorage.getItem('dashboard_chat_theme') as any) || 'system';
+  });
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSecAMenuOpen, setIsSecAMenuOpen] = useState(true);
 
   useEffect(() => {
     if (theme === 'system') {
@@ -75,10 +101,22 @@ export function Dashboard({ user }: DashboardProps) {
     localStorage.setItem('dashboard_theme', theme);
   }, [theme]);
 
+  useEffect(() => {
+    localStorage.setItem('dashboard_chat_theme', chatTheme);
+  }, [chatTheme]);
+
   const [loading, setLoading] = useState(false);
   const [subjectList, setSubjectList] = useState<SubjectData[]>([]);
   const [homeworkList, setHomeworkList] = useState<HomeworkData[]>([]);
-  const [activeTab, setActiveTab] = useState<'home' | 'schedule' | 'analytics' | 'friends' | 'profile' | 'subject-details' | 'chat'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'schedule' | 'analytics' | 'friends' | 'profile' | 'subject-details' | 'chat' | 'overview'>('home');
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [weatherData, setWeatherData] = useState<{ temp: number, code: number } | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(true);
+  const [userLocation, setUserLocation] = useState<{lat: number, lon: number} | null>(null);
+  const [locationName, setLocationName] = useState<string>('Bangkok');
+  const [distanceMeters, setDistanceMeters] = useState(0);
+  const [steps, setSteps] = useState(0);
+  const [hasGpsError, setHasGpsError] = useState(false);
   
   const currentDayIndex = new Date().getDay(); // 0 is Sunday
   const defaultDay = currentDayIndex === 0 ? 'Sunday' : 
@@ -132,11 +170,117 @@ export function Dashboard({ user }: DashboardProps) {
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [editingMessage, setEditingMessage] = useState<MessageData | null>(null);
   const [replyingTo, setReplyingTo] = useState<MessageData | null>(null);
+  const [isChatMenuOpen, setIsChatMenuOpen] = useState(false);
+  const [roomTheme, setRoomTheme] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!activeChatId) {
+      setRoomTheme(null);
+      return;
+    }
+    const unsub = onSnapshot(doc(db, 'chats', activeChatId), (snap) => {
+      if (snap.exists() && snap.data().theme) {
+        setRoomTheme(snap.data().theme);
+      } else {
+        setRoomTheme(null);
+      }
+    });
+    return () => unsub();
+  }, [activeChatId]);
 
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    let watchId: number;
+    let lastLat: number | null = null;
+    let lastLon: number | null = null;
+
+    const fetchWeatherData = async (lat: number, lon: number) => {
+      try {
+        setWeatherLoading(true);
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+        const data = await res.json();
+        if (data && data.current_weather) {
+          setWeatherData({
+            temp: data.current_weather.temperature,
+            code: data.current_weather.weathercode
+          });
+        }
+        
+        try {
+          const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
+          const geoData = await geoRes.json();
+          if (geoData && (geoData.locality || geoData.city)) {
+            setLocationName(geoData.locality || geoData.city);
+          }
+        } catch (e) {}
+      } catch (e) {
+        console.error('Weather fetch error', e);
+      } finally {
+        setWeatherLoading(false);
+      }
+    };
+
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLocation({ lat: latitude, lon: longitude });
+          lastLat = latitude;
+          lastLon = longitude;
+          setHasGpsError(false);
+          fetchWeatherData(latitude, longitude);
+
+          watchId = navigator.geolocation.watchPosition(
+            (pos) => {
+              const { latitude: newLat, longitude: newLon } = pos.coords;
+              if (lastLat !== null && lastLon !== null) {
+                const dist = calculateDistance(lastLat, lastLon, newLat, newLon);
+                if (dist > 2) { 
+                  setDistanceMeters(prev => {
+                    const newDist = prev + dist;
+                    setSteps(Math.floor(newDist / 0.75));
+                    return newDist;
+                  });
+                  lastLat = newLat;
+                  lastLon = newLon;
+                  setUserLocation({ lat: newLat, lon: newLon });
+                }
+              }
+            },
+            () => {},
+            { enableHighAccuracy: true, maximumAge: 0 }
+          );
+        },
+        (error) => {
+          console.error("GPS Error:", error);
+          setHasGpsError(true);
+          fetchWeatherData(13.75, 100.50); 
+        },
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    } else {
+      fetchWeatherData(13.75, 100.50);
+    }
+
+    const weatherTimer = setInterval(() => {
+      if (lastLat && lastLon) fetchWeatherData(lastLat, lastLon);
+      else fetchWeatherData(13.75, 100.50);
+    }, 15 * 60 * 1000);
+
+    return () => {
+      clearInterval(weatherTimer);
+      if (watchId !== undefined) navigator.geolocation.clearWatch(watchId);
+    };
   }, []);
 
   useEffect(() => {
@@ -604,8 +748,11 @@ export function Dashboard({ user }: DashboardProps) {
 
   const mostActiveSubject = subjectHwCounts.length > 0 && subjectHwCounts[0].count > 0 ? subjectHwCounts[0] : null;
 
+  const effectiveChatTheme = roomTheme || chatTheme;
+  const activeEffectiveTheme = activeTab === 'chat' && activeChatId && effectiveChatTheme !== 'system' ? effectiveChatTheme : undefined;
+
   return (
-    <div className="app-container" style={{ paddingBottom: '70px' }}>
+    <div className="app-container" data-theme={activeEffectiveTheme} style={{ paddingBottom: '70px', background: 'var(--bg-primary)', transition: 'background-color 0.3s ease' }}>
       <header style={{ 
         padding: '1.5rem', 
         borderBottom: '1px solid var(--border-color)',
@@ -647,6 +794,89 @@ export function Dashboard({ user }: DashboardProps) {
               <p style={{ color: 'var(--text-secondary)' }}>{user.email?.replace('@dashboard.com', '')}</p>
             </div>
             
+            {/* Clock & Weather Widget */}
+            <div style={{ 
+              background: 'var(--bg-secondary)', 
+              borderRadius: '24px', 
+              padding: '2rem', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              border: '1px solid var(--border-color)',
+              boxShadow: '0 10px 30px -10px rgba(0,0,0,0.1)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              {/* Decorative glows */}
+              <div style={{ position: 'absolute', top: '-20px', left: '-20px', width: '100px', height: '100px', background: 'var(--accent-color)', opacity: 0.15, borderRadius: '50%', filter: 'blur(30px)' }} />
+              <div style={{ position: 'absolute', bottom: '-20px', right: '-20px', width: '120px', height: '120px', background: '#3b82f6', opacity: 0.15, borderRadius: '50%', filter: 'blur(40px)' }} />
+              
+              <div style={{ fontSize: '3.5rem', fontWeight: 800, letterSpacing: '-2px', color: 'var(--text-primary)', lineHeight: 1.1, marginBottom: '0.25rem', zIndex: 1 }}>
+                {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </div>
+              <div style={{ fontSize: '1rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '1.5rem', zIndex: 1 }}>
+                {currentTime.toLocaleDateString(t('nav_home') === 'หน้าหลัก' ? 'th-TH' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'var(--bg-primary)', padding: '0.75rem 1.25rem', borderRadius: '16px', zIndex: 1, border: '1px solid var(--border-color)' }}>
+                {weatherLoading ? (
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Loading...</div>
+                ) : weatherData ? (
+                  <>
+                    {getWeatherDetails(weatherData.code).icon}
+                    <div>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.1 }}>
+                        {weatherData.temp}°C
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                        <MapPin size={10} /> {locationName}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Unavailable</div>
+                )}
+              </div>
+            </div>
+
+            {/* GPS & Traffic Controls */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <button 
+                onClick={() => {
+                  if (userLocation) {
+                    window.open(`https://www.google.com/maps/@${userLocation.lat},${userLocation.lon},14z/data=!5m1!1e1`, '_blank');
+                  } else {
+                    alert(t('home_gps_error' as TranslationKey));
+                  }
+                }}
+                className="btn btn-secondary" 
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px' }}
+              >
+                <Navigation2 size={24} color="#ff3b30" />
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>{t('home_check_traffic' as TranslationKey)}</span>
+              </button>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px' }}>
+                <Footprints size={24} color="#34c759" />
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>{steps.toLocaleString()}</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{t('home_steps' as TranslationKey)}</div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>{(distanceMeters / 1000).toFixed(2)} km</div>
+                </div>
+              </div>
+            </div>
+            
+            {hasGpsError && (
+              <div style={{ fontSize: '0.8rem', color: '#ff3b30', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
+                <Map size={14} /> {t('home_gps_error' as TranslationKey)}
+              </div>
+            )}
+          </div>
+        )}
+        
+        {activeTab === 'overview' && (
+          <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {/* Today's Classes - Flat List */}
             <div>
               <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', marginLeft: '0.75rem', fontWeight: 600 }}>
@@ -1079,20 +1309,59 @@ export function Dashboard({ user }: DashboardProps) {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-color)', marginBottom: '1rem' }}>
-                  <button onClick={() => setActiveChatId(null)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                    <ArrowLeft size={20} />
-                  </button>
-                  <div style={{ fontWeight: 600, fontSize: '1.125rem' }}>
-                    {activeChatId === 'global' ? t('chat_global_room' as TranslationKey) : (
-                      <>{t('chat_private_with' as TranslationKey)} {
-                        (() => {
-                          const u = userList.find(u => [user.uid, u.id].sort().join('_') === activeChatId);
-                          return u ? (u.displayName || u.username || u.id) : 'Unknown';
-                        })()
-                      }</>
-                    )}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '1rem', borderBottom: '1px solid var(--border-color)', marginBottom: '1rem', position: 'relative' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <button onClick={() => setActiveChatId(null)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                      <ArrowLeft size={20} />
+                    </button>
+                    <div style={{ fontWeight: 600, fontSize: '1.125rem' }}>
+                      {activeChatId === 'global' ? t('chat_global_room' as TranslationKey) : (
+                        <>{t('chat_private_with' as TranslationKey)} {
+                          (() => {
+                            const u = userList.find(u => [user.uid, u.id].sort().join('_') === activeChatId);
+                            return u ? (u.displayName || u.username || u.id) : 'Unknown';
+                          })()
+                        }</>
+                      )}
+                    </div>
                   </div>
+                  
+                  <button 
+                    onClick={() => setIsChatMenuOpen(!isChatMenuOpen)}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', padding: '0.5rem', display: 'flex', alignItems: 'center' }}
+                  >
+                    <Menu size={20} />
+                  </button>
+                  
+                  {isChatMenuOpen && (
+                    <>
+                      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9 }} onClick={() => setIsChatMenuOpen(false)} />
+                      <div className="card animate-scale-in" style={{ position: 'absolute', top: '100%', right: '0', zIndex: 10, padding: '1rem', marginTop: '0.5rem', minWidth: '200px', display: 'flex', flexDirection: 'column', gap: '0.5rem', transformOrigin: 'top right' }}>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>{t('profile_theme_chat')}</div>
+                        <select
+                          value={effectiveChatTheme}
+                          onChange={async (e) => { 
+                            const newTheme = e.target.value;
+                            if (activeChatId) {
+                              try {
+                                await setDoc(doc(db, 'chats', activeChatId), { theme: newTheme }, { merge: true });
+                              } catch (err) {
+                                console.error('Failed to sync theme', err);
+                              }
+                            }
+                            setChatTheme(newTheme as any); 
+                            setIsChatMenuOpen(false); 
+                          }}
+                          className="ios-select"
+                        >
+                          <option value="system">{t('profile_theme_system')}</option>
+                          <option value="light">{t('profile_theme_light')}</option>
+                          <option value="dark">{t('profile_theme_dark')}</option>
+                          <option value="white-pink">{t('profile_theme_white_pink')}</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
                 </div>
                 
                 <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.2rem', padding: '1rem 0', scrollbarWidth: 'none' }}>
@@ -1364,18 +1633,21 @@ export function Dashboard({ user }: DashboardProps) {
                       <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Eye size={16} color="var(--accent-color)" />
                       </div>
-                      <span style={{ fontSize: '0.95rem', fontWeight: 500 }}>{t('profile_theme')}</span>
+                      <span style={{ fontSize: '0.95rem', fontWeight: 500 }}>{t('profile_theme_app')}</span>
                     </div>
                     <select
                       value={theme}
-                      onChange={(e) => setTheme(e.target.value as 'system' | 'light' | 'dark')}
+                      onChange={(e) => setTheme(e.target.value as 'system' | 'light' | 'dark' | 'white-pink')}
                       className="ios-select-inline"
                     >
                       <option value="system">{t('profile_theme_system')}</option>
                       <option value="light">{t('profile_theme_light')}</option>
                       <option value="dark">{t('profile_theme_dark')}</option>
+                      <option value="white-pink">{t('profile_theme_white_pink')}</option>
                     </select>
                   </div>
+
+
                 </div>
               </div>
 
@@ -1888,14 +2160,30 @@ export function Dashboard({ user }: DashboardProps) {
               <button onClick={() => setIsMenuOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={24} /></button>
             </div>
             <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <button onClick={() => { setActiveTab('schedule'); setIsMenuOpen(false); }} className="btn btn-secondary" style={{ display: 'flex', justifyContent: 'flex-start', border: 'none', background: activeTab === 'schedule' ? 'var(--bg-secondary)' : 'transparent', padding: '1rem', borderRadius: '12px', alignItems: 'center' }}>
-                <Calendar size={20} style={{ color: activeTab === 'schedule' ? 'var(--accent-color)' : 'var(--text-primary)' }} />
-                <span style={{ color: activeTab === 'schedule' ? 'var(--accent-color)' : 'var(--text-primary)', fontWeight: 500 }}>{t('nav_schedule' as TranslationKey)}</span>
+              <button 
+                onClick={() => setIsSecAMenuOpen(!isSecAMenuOpen)}
+                style={{ background: 'none', border: 'none', width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', cursor: 'pointer', color: 'var(--text-secondary)' }}
+              >
+                <div style={{ fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {t('menu_sec_a_title' as TranslationKey)}
+                </div>
+                <ChevronDown size={16} style={{ transform: isSecAMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
               </button>
-              <button onClick={() => { setActiveTab('analytics'); setIsMenuOpen(false); }} className="btn btn-secondary" style={{ display: 'flex', justifyContent: 'flex-start', border: 'none', background: activeTab === 'analytics' ? 'var(--bg-secondary)' : 'transparent', padding: '1rem', borderRadius: '12px', alignItems: 'center' }}>
-                <BarChart2 size={20} style={{ color: activeTab === 'analytics' ? 'var(--accent-color)' : 'var(--text-primary)' }} />
-                <span style={{ color: activeTab === 'analytics' ? 'var(--accent-color)' : 'var(--text-primary)', fontWeight: 500 }}>{t('nav_stats' as TranslationKey)}</span>
-              </button>
+              
+              <div className="animate-fade-in" style={{ display: isSecAMenuOpen ? 'flex' : 'none', flexDirection: 'column', gap: '0.5rem' }}>
+                <button onClick={() => { setActiveTab('overview'); setIsMenuOpen(false); }} className="btn btn-secondary" style={{ display: 'flex', justifyContent: 'flex-start', border: 'none', background: activeTab === 'overview' ? 'var(--bg-secondary)' : 'transparent', padding: '1rem', borderRadius: '12px', alignItems: 'center' }}>
+                  <BookOpen size={20} style={{ color: activeTab === 'overview' ? 'var(--accent-color)' : 'var(--text-primary)' }} />
+                  <span style={{ color: activeTab === 'overview' ? 'var(--accent-color)' : 'var(--text-primary)', fontWeight: 500, marginLeft: '0.75rem' }}>{t('nav_overview' as TranslationKey)}</span>
+                </button>
+                <button onClick={() => { setActiveTab('schedule'); setIsMenuOpen(false); }} className="btn btn-secondary" style={{ display: 'flex', justifyContent: 'flex-start', border: 'none', background: activeTab === 'schedule' ? 'var(--bg-secondary)' : 'transparent', padding: '1rem', borderRadius: '12px', alignItems: 'center' }}>
+                  <Calendar size={20} style={{ color: activeTab === 'schedule' ? 'var(--accent-color)' : 'var(--text-primary)' }} />
+                  <span style={{ color: activeTab === 'schedule' ? 'var(--accent-color)' : 'var(--text-primary)', fontWeight: 500, marginLeft: '0.75rem' }}>{t('nav_schedule' as TranslationKey)}</span>
+                </button>
+                <button onClick={() => { setActiveTab('analytics'); setIsMenuOpen(false); }} className="btn btn-secondary" style={{ display: 'flex', justifyContent: 'flex-start', border: 'none', background: activeTab === 'analytics' ? 'var(--bg-secondary)' : 'transparent', padding: '1rem', borderRadius: '12px', alignItems: 'center' }}>
+                  <BarChart2 size={20} style={{ color: activeTab === 'analytics' ? 'var(--accent-color)' : 'var(--text-primary)' }} />
+                  <span style={{ color: activeTab === 'analytics' ? 'var(--accent-color)' : 'var(--text-primary)', fontWeight: 500, marginLeft: '0.75rem' }}>{t('nav_stats' as TranslationKey)}</span>
+                </button>
+              </div>
             </div>
           </div>
         </>

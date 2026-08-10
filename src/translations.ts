@@ -8,6 +8,8 @@ export const translations = {
     nav_friends: "Friends",
     nav_profile: "Profile",
     nav_chat: "Chat",
+    nav_overview: "Overview",
+    menu_sec_a_title: "For Sec A",
 
     // Chat Tab
     chat_title: "Chats",
@@ -60,6 +62,10 @@ export const translations = {
 
     // Home Tab
     home_welcome_back: "Welcome back,",
+    home_check_traffic: "Check Traffic",
+    home_steps: "Steps",
+    home_distance: "Distance",
+    home_gps_error: "Enable GPS for local data",
     home_todays_classes: "Today's Classes",
     home_homework: "My Homework",
     home_urgent_homework: "Urgent Homework",
@@ -106,9 +112,12 @@ export const translations = {
     profile_confirm_password: "Confirm New Password",
     profile_language: "Language",
     profile_theme: "Theme",
+    profile_theme_app: "App Theme",
+    profile_theme_chat: "Chat Theme",
     profile_theme_light: "Light",
     profile_theme_dark: "Dark",
     profile_theme_system: "System",
+    profile_theme_white_pink: "White Pink",
     profile_sign_out: "Sign Out",
   },
   th: {
@@ -120,6 +129,8 @@ export const translations = {
     nav_friends: "เพื่อน",
     nav_profile: "โปรไฟล์",
     nav_chat: "แชท",
+    nav_overview: "ภาพรวม",
+    menu_sec_a_title: "สำหรับ Sec A",
 
     // Chat Tab
     chat_title: "แชท",
@@ -172,6 +183,10 @@ export const translations = {
 
     // Home Tab
     home_welcome_back: "ยินดีต้อนรับกลับ,",
+    home_check_traffic: "ดูรถติดบริเวณนี้",
+    home_steps: "ก้าว",
+    home_distance: "ระยะทาง",
+    home_gps_error: "เปิด GPS เพื่อข้อมูลที่แม่นยำ",
     home_todays_classes: "คาบเรียนวันนี้",
     home_homework: "การบ้านของฉัน",
     home_urgent_homework: "การบ้านด่วน",
@@ -218,9 +233,12 @@ export const translations = {
     profile_confirm_password: "ยืนยันรหัสผ่านใหม่",
     profile_language: "ภาษา (Language)",
     profile_theme: "ธีม",
+    profile_theme_app: "ธีมแอพ",
+    profile_theme_chat: "ธีมแชท",
     profile_theme_light: "สว่าง",
     profile_theme_dark: "มืด",
     profile_theme_system: "ตามระบบ",
+    profile_theme_white_pink: "ขาวชมพู",
     profile_sign_out: "ออกจากระบบ",
   },
   zh: {
@@ -232,6 +250,8 @@ export const translations = {
     nav_friends: "朋友",
     nav_profile: "个人资料",
     nav_chat: "聊天",
+    nav_overview: "概览",
+    menu_sec_a_title: "对于 Sec A",
 
     // Chat Tab
     chat_title: "聊天",
@@ -284,6 +304,10 @@ export const translations = {
 
     // Home Tab
     home_welcome_back: "欢迎回来,",
+    home_check_traffic: "查看交通",
+    home_steps: "步",
+    home_distance: "距离",
+    home_gps_error: "启用GPS获取准确数据",
     home_todays_classes: "今日课程",
     home_homework: "我的作业",
     home_urgent_homework: "紧急作业",
@@ -330,9 +354,12 @@ export const translations = {
     profile_confirm_password: "确认新密码",
     profile_language: "语言 (Language)",
     profile_theme: "主题",
+    profile_theme_app: "应用主题",
+    profile_theme_chat: "聊天主题",
     profile_theme_light: "浅色",
     profile_theme_dark: "深色",
     profile_theme_system: "跟随系统",
+    profile_theme_white_pink: "粉白",
     profile_sign_out: "退出登录",
   }
 };
