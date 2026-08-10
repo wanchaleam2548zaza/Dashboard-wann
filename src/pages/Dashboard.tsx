@@ -5,7 +5,7 @@ import { doc, updateDoc, setDoc, collection, onSnapshot, addDoc, query, where, d
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
-import { LogOut, Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft, Camera, Trash2, Lock, Eye, EyeOff, Edit2, Check, Globe, MessageSquare, Send, CornerUpLeft, Menu, Share2, ChevronDown, Sun, Cloud, CloudRain, CloudLightning, Footprints, Map, Navigation2 } from 'lucide-react';
+import { LogOut, Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft, Camera, Trash2, Lock, Eye, EyeOff, Edit2, Check, Globe, MessageSquare, Send, CornerUpLeft, Menu, Share2, ChevronDown, Sun, Cloud, CloudRain, CloudLightning, Map, Navigation2 } from 'lucide-react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { useLanguage } from '../contexts/LanguageContext';
 import type { TranslationKey } from '../translations';
@@ -187,7 +187,6 @@ export function Dashboard({ user }: DashboardProps) {
   }, []);
 
   useEffect(() => {
-    let watchId: number;
     let lastLat: number | null = null;
     let lastLon: number | null = null;
 
