@@ -25,17 +25,6 @@ const getWeatherDetails = (code: number) => {
   return { icon: <Sun size={32} color="#f59e0b" />, desc: 'Unknown' };
 };
 
-const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-  const R = 6371e3;
-  const φ1 = lat1 * Math.PI/180;
-  const φ2 = lat2 * Math.PI/180;
-  const Δφ = (lat2-lat1) * Math.PI/180;
-  const Δλ = (lon2-lon1) * Math.PI/180;
-  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
-};
-
 interface SubjectData {
   id: string;
   name: string;
@@ -114,8 +103,6 @@ export function Dashboard({ user }: DashboardProps) {
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [userLocation, setUserLocation] = useState<{lat: number, lon: number} | null>(null);
   const [locationName, setLocationName] = useState<string>('Bangkok');
-  const [distanceMeters, setDistanceMeters] = useState(0);
-  const [steps, setSteps] = useState(0);
   const [hasGpsError, setHasGpsError] = useState(false);
   
   const currentDayIndex = new Date().getDay(); // 0 is Sunday
@@ -239,27 +226,6 @@ export function Dashboard({ user }: DashboardProps) {
           lastLon = longitude;
           setHasGpsError(false);
           fetchWeatherData(latitude, longitude);
-
-          watchId = navigator.geolocation.watchPosition(
-            (pos) => {
-              const { latitude: newLat, longitude: newLon } = pos.coords;
-              if (lastLat !== null && lastLon !== null) {
-                const dist = calculateDistance(lastLat, lastLon, newLat, newLon);
-                if (dist > 2) { 
-                  setDistanceMeters(prev => {
-                    const newDist = prev + dist;
-                    setSteps(Math.floor(newDist / 0.75));
-                    return newDist;
-                  });
-                  lastLat = newLat;
-                  lastLon = newLon;
-                  setUserLocation({ lat: newLat, lon: newLon });
-                }
-              }
-            },
-            () => {},
-            { enableHighAccuracy: true, maximumAge: 0 }
-          );
         },
         (error) => {
           console.error("GPS Error:", error);
@@ -279,7 +245,6 @@ export function Dashboard({ user }: DashboardProps) {
 
     return () => {
       clearInterval(weatherTimer);
-      if (watchId !== undefined) navigator.geolocation.clearWatch(watchId);
     };
   }, []);
 
@@ -841,30 +806,21 @@ export function Dashboard({ user }: DashboardProps) {
             </div>
 
             {/* GPS & Traffic Controls */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <button 
                 onClick={() => {
                   if (userLocation) {
-                    window.open(`https://www.google.com/maps/@${userLocation.lat},${userLocation.lon},14z/data=!5m1!1e1`, '_blank');
+                    window.open(`https://www.google.com/maps?q=${userLocation.lat},${userLocation.lon}&layer=t`, '_blank');
                   } else {
                     alert(t('home_gps_error' as TranslationKey));
                   }
                 }}
                 className="btn btn-secondary" 
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px' }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', padding: '1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px' }}
               >
                 <Navigation2 size={24} color="#ff3b30" />
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>{t('home_check_traffic' as TranslationKey)}</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>{t('home_check_traffic' as TranslationKey)}</span>
               </button>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px' }}>
-                <Footprints size={24} color="#34c759" />
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>{steps.toLocaleString()}</div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{t('home_steps' as TranslationKey)}</div>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>{(distanceMeters / 1000).toFixed(2)} km</div>
-                </div>
-              </div>
             </div>
             
             {hasGpsError && (
