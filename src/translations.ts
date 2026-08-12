@@ -1,5 +1,8 @@
 export const translations = {
   en: {
+    sort_by: 'Sort by:',
+    completion_date: 'Completion Date',
+    due_date: 'Due Date',
     // Navigation
     nav_home: "Home",
     nav_schedule: "Schedule",
@@ -130,6 +133,9 @@ export const translations = {
     profile_sign_out: "Sign Out",
   },
   th: {
+    sort_by: 'จัดเรียงตาม:',
+    completion_date: 'วันที่ทำเสร็จ',
+    due_date: 'วันกำหนดส่ง',
     // Navigation
     nav_home: "หน้าหลัก",
     nav_schedule: "ตารางเรียน",
@@ -260,6 +266,9 @@ export const translations = {
     profile_sign_out: "ออกจากระบบ",
   },
   zh: {
+    sort_by: '排序方式:',
+    completion_date: '完成日期',
+    due_date: '截止日期',
     // Navigation
     nav_home: "主页",
     nav_schedule: "课程表",

@@ -108,6 +108,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
   height: 100%;
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input, textarea {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 html {
@@ -345,4 +352,104 @@ p { color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.875rem; }
   background-color: var(--bg-primary);
   color: var(--text-primary);
   direction: ltr; /* Reset text direction for options */
+}
+
+/* iOS Grouped List Styles */
+.ios-list-group {
+  margin-bottom: 2rem;
+}
+
+.ios-list-header {
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+  padding-left: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+
+.ios-list {
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.ios-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1rem;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  min-height: 44px;
+}
+
+.ios-list-item:last-child {
+  border-bottom: none;
+}
+
+.ios-list-item.clickable {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.ios-list-item.clickable:active {
+  background-color: var(--border-color);
+}
+
+.ios-list-item-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.ios-list-item-title {
+  font-size: 1rem;
+  color: var(--text-primary);
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ios-list-item-subtitle {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin-top: 0.125rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ios-list-item-value {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin-left: 1rem;
+  flex-shrink: 0;
+}
+
+.ios-list-item-icon {
+  margin-right: 1rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
+
+.ios-list-item-icon.colored {
+  color: var(--white);
+}
+
+.ios-list-footer {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+  padding: 0 1rem;
+  text-align: center;
 }

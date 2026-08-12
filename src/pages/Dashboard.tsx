@@ -4,11 +4,13 @@ import { signOut, reauthenticateWithCredential, EmailAuthProvider, updatePasswor
 import { doc, updateDoc, setDoc, collection, onSnapshot, addDoc, query, where, deleteDoc, increment } from 'firebase/firestore';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Card } from '../components/ui/Card';
-import { LogOut, Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft, Camera, Trash2, Lock, Eye, EyeOff, Edit2, Check, CheckCheck, Globe, MessageSquare, Send, CornerUpLeft, Menu, Share2, ChevronDown, Sun, Cloud, CloudRain, CloudLightning, Map } from 'lucide-react';
+import { Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft, Trash2, Edit2, Globe, CheckCheck, MessageSquare, Send, CornerUpLeft, Menu, Share2, ChevronDown, Sun, Cloud, CloudRain, CloudLightning, Map } from 'lucide-react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { useLanguage } from '../contexts/LanguageContext';
 import type { TranslationKey } from '../translations';
+import { ScheduleTab } from '../components/dashboard/ScheduleTab';
+import { SettingsTab } from '../components/dashboard/SettingsTab';
+import { HomeworkTab } from '../components/dashboard/HomeworkTab';
 
 interface DashboardProps {
   user: FirebaseUser;
@@ -31,7 +33,7 @@ const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month
 const DAYS_EN = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 const DAYS_TH = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
 
-interface SubjectData {
+export interface SubjectData {
   id: string;
   name: string;
   teacher: string;
@@ -39,6 +41,15 @@ interface SubjectData {
   day?: string;
   startTime?: string;
   endTime?: string;
+  createdAt: string;
+}
+
+export interface UserData {
+  id: string;
+  username: string;
+  displayName?: string;
+  avatarUrl?: string;
+  isOnline: boolean;
   createdAt: string;
 }
 
@@ -151,7 +162,7 @@ export function Dashboard({ user }: DashboardProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Homework To-Do State
-  const [allCompletedHomework, setAllCompletedHomework] = useState<{userId: string, homeworkId: string}[]>([]);
+  const [allCompletedHomework, setAllCompletedHomework] = useState<{userId: string, homeworkId: string, completedAt?: string}[]>([]);
   const [completedHomeworkIds, setCompletedHomeworkIds] = useState<Set<string>>(new Set());
   const [selectedHomework, setSelectedHomework] = useState<HomeworkData | null>(null);
 
@@ -166,6 +177,21 @@ export function Dashboard({ user }: DashboardProps) {
   const [editingDisplayName, setEditingDisplayName] = useState(false);
   const [displayNameInput, setDisplayNameInput] = useState('');
   const [savingDisplayName, setSavingDisplayName] = useState(false);
+
+  const handleSaveDisplayName = async () => {
+    if (!displayNameInput.trim()) return;
+    setSavingDisplayName(true);
+    try {
+      await updateDoc(doc(db, 'users', user.uid), { displayName: displayNameInput.trim() });
+      setDisplayName(displayNameInput.trim());
+      setEditingDisplayName(false);
+    } catch (err) {
+      console.error(err);
+      alert("Error saving display name");
+    } finally {
+      setSavingDisplayName(false);
+    }
+  };
 
   const [canAddHomework, setCanAddHomework] = useState(false);
 
@@ -423,14 +449,7 @@ export function Dashboard({ user }: DashboardProps) {
   };
 
   // Friends / User List State
-  interface UserListItem {
-    id: string;
-    username: string;
-    displayName?: string;
-    avatarUrl?: string;
-    isOnline?: boolean;
-  }
-  const [userList, setUserList] = useState<UserListItem[]>([]);
+  const [userList, setUserList] = useState<UserData[]>([]);
   const [chatMetadata, setChatMetadata] = useState<Record<string, { unreadCount: number, lastMessage?: string }>>({});
 
   // Change Password State
@@ -444,8 +463,7 @@ export function Dashboard({ user }: DashboardProps) {
   const [pwLoading, setPwLoading] = useState(false);
   const [pwMessage, setPwMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   
-  const [profileLoading, setProfileLoading] = useState(true);
-
+  
   // Load avatar + displayName from Firestore in real-time
   useEffect(() => {
     const userDocRef = doc(db, 'users', user.uid);
@@ -464,19 +482,17 @@ export function Dashboard({ user }: DashboardProps) {
         setDisplayNameInput(prev => editingDisplayName ? prev : dn);
         setCanAddHomework(!!data.canAddHomework);
       }
-      setProfileLoading(false);
+      
     }, (err) => {
       console.error("Error fetching my profile:", err);
-      setProfileLoading(false);
+      
     });
 
     // Subscribe to all users for Friends tab
     const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
-      const list: UserListItem[] = [];
+      const list: UserData[] = [];
       snap.forEach(d => {
-        if (d.id !== user.uid) {
-          list.push({ id: d.id, ...d.data() } as UserListItem);
-        }
+        list.push({ id: d.id, ...d.data() } as UserData);
       });
       list.sort((a, b) => (b.isOnline ? 1 : 0) - (a.isOnline ? 1 : 0));
       setUserList(list);
@@ -651,12 +667,12 @@ export function Dashboard({ user }: DashboardProps) {
     const unsubscribeCompletions = onSnapshot(
       collection(db, 'completedHomework'),
       (snapshot) => {
-        const completed: {userId: string, homeworkId: string}[] = [];
+        const completed: {userId: string, homeworkId: string, completedAt?: string}[] = [];
         const completedIds = new Set<string>();
         snapshot.forEach((doc) => {
           const data = doc.data();
           if (data.userId && data.homeworkId) {
-            completed.push({ userId: data.userId, homeworkId: data.homeworkId });
+            completed.push({ userId: data.userId, homeworkId: data.homeworkId, completedAt: data.completedAt });
             if (data.userId === user.uid) {
               completedIds.add(data.homeworkId);
             }
@@ -1076,260 +1092,33 @@ export function Dashboard({ user }: DashboardProps) {
         )}
         
         {activeTab === 'overview' && (
-          <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {/* Today's Classes - Flat List */}
-            <div>
-              <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', marginLeft: '0.75rem', fontWeight: 600 }}>
-                {t('home_todays_classes')} ({t(`day_${defaultDay}` as TranslationKey)})
-              </h3>
-              
-              <div style={{ 
-                  display: 'flex', flexDirection: 'column', 
-                  background: 'var(--bg-secondary)', 
-                  borderRadius: '12px', 
-                  border: '1px solid var(--border-color)',
-                  overflow: 'hidden'
-              }}>
-                {(!groupedSubjects[defaultDay] || groupedSubjects[defaultDay].length === 0) ? (
-                  <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '1.5rem', margin: 0 }}>{t('home_no_classes')}</p>
-                ) : (
-                  groupedSubjects[defaultDay].map((subject, idx) => (
-                    <div 
-                      key={subject.id} 
-                      onClick={() => { setSelectedSubject(subject); setActiveTab('subject-details'); }}
-                      style={{ 
-                        padding: '0.875rem 1rem', 
-                        cursor: 'pointer', 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        borderBottom: idx === groupedSubjects[defaultDay].length - 1 ? 'none' : '1px solid var(--border-color)',
-                        transition: 'background-color 0.2s' 
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-primary)'}
-                      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                        <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.95rem' }}>{subject.name}</span>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{subject.room}</span>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                          {subject.startTime}
-                        </div>
-                        <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
-                          - {subject.endTime}
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* Homework List - Flat */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '0.5rem', marginLeft: '0.75rem' }}>
-                <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, fontWeight: 600 }}>
-                  {t('home_homework')}
-                </h3>
-              </div>
-
-              <div style={{ 
-                display: 'flex', 
-                background: 'var(--bg-secondary)', 
-                padding: '0.25rem', 
-                borderRadius: '8px', 
-                marginBottom: '0.75rem', 
-                overflowX: 'auto', 
-                scrollbarWidth: 'none',
-                gap: '0.25rem',
-                border: '1px solid var(--border-color)'
-              }}>
-                {(['new', 'pending', 'urgent', 'completed'] as const).map(tab => (
-                  <button
-                    key={tab}
-                    onClick={() => setHomeHwTab(tab)}
-                    style={{
-                      flex: 1,
-                      padding: '0.4rem',
-                      borderRadius: '6px',
-                      border: 'none',
-                      fontWeight: 600,
-                      fontSize: '0.8rem',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      transition: 'all 0.2s',
-                      background: homeHwTab === tab ? 'var(--bg-primary)' : 'transparent',
-                      color: homeHwTab === tab ? 'var(--text-primary)' : 'var(--text-secondary)',
-                      boxShadow: homeHwTab === tab ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                    }}
-                  >
-                    {t(`hw_tab_${tab}` as TranslationKey)}
-                  </button>
-                ))}
-              </div>
-
-              <div style={{ 
-                  display: 'flex', flexDirection: 'column', 
-                  background: 'var(--bg-secondary)', 
-                  borderRadius: '12px', 
-                  border: '1px solid var(--border-color)',
-                  overflow: 'hidden'
-              }}>
-                {(() => {
-                  const now = new Date();
-                  now.setHours(0, 0, 0, 0);
-                  const threeDaysFromNow = new Date(now);
-                  threeDaysFromNow.setDate(now.getDate() + 3);
-
-                  const filteredHw = homeworkList.filter(hw => {
-                    const isCompleted = completedHomeworkIds.has(hw.id);
-                    if (homeHwTab === 'completed') return isCompleted;
-                    if (isCompleted) return false;
-
-                    const dueDate = new Date(hw.dueDate);
-                    dueDate.setHours(0, 0, 0, 0);
-
-                    if (homeHwTab === 'pending') return true;
-                    if (homeHwTab === 'urgent') return dueDate >= now && dueDate <= threeDaysFromNow;
-                    if (homeHwTab === 'new') return dueDate > threeDaysFromNow;
-                    
-                    return true;
-                  });
-
-                  if (filteredHw.length === 0) {
-                    return <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '1.5rem', margin: 0 }}>{t('hw_no_homework_in_tab')}</p>;
-                  }
-                  
-                  return filteredHw.map((hw, idx) => {
-                    const subject = subjectList.find(s => s.id === hw.subjectId);
-                    const isCompleted = completedHomeworkIds.has(hw.id);
-                    return (
-                      <div 
-                        key={hw.id} 
-                        onClick={() => setSelectedHomework(hw)} 
-                        style={{ 
-                          padding: '0.875rem 1rem', 
-                          cursor: 'pointer', 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '1rem', 
-                          transition: 'background-color 0.2s',
-                          borderBottom: idx === filteredHw.length - 1 ? 'none' : '1px solid var(--border-color)'
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-primary)'}
-                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <div style={{ color: isCompleted ? '#34c759' : 'var(--text-secondary)', flexShrink: 0 }}>
-                           {isCompleted ? <CheckCircle2 size={24} /> : <div style={{ width: '22px', height: '22px', borderRadius: '50%', border: '2px solid var(--text-secondary)' }} />}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 600, marginBottom: '0.15rem', color: isCompleted ? 'var(--text-secondary)' : 'var(--text-primary)', textDecoration: isCompleted ? 'line-through' : 'none', fontSize: '0.95rem' }}>{hw.title}</div>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span>{subject ? subject.name : 'Unknown Subject'}</span>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontWeight: 500, color: isCompleted ? 'var(--text-secondary)' : '#ff3b30' }}>
-                              <Calendar size={12} /> {new Date(hw.dueDate).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <CompletedByAvatars homeworkId={hw.id} allCompleted={allCompletedHomework} users={userList} />
-                        </div>
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-            </div>
-          </div>
+          <HomeworkTab
+            t={t}
+            defaultDay={defaultDay}
+            groupedSubjects={groupedSubjects}
+            setSelectedSubject={setSelectedSubject}
+            setActiveTab={setActiveTab}
+            homeHwTab={homeHwTab}
+            setHomeHwTab={setHomeHwTab}
+            homeworkList={homeworkList}
+            completedHomeworkIds={completedHomeworkIds}
+            setSelectedHomework={setSelectedHomework}
+            subjectList={subjectList}
+            allCompletedHomework={allCompletedHomework}
+            userList={userList}
+          />
         )}
 
         {activeTab === 'schedule' && (
-          <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <h2 style={{ fontSize: '1.25rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Calendar size={20} /> {t('schedule_title')}
-            </h2>
-            
-            {/* Horizontal Day Selector */}
-            <div style={{ 
-              display: 'flex', 
-              gap: '0.5rem', 
-              overflowX: 'auto', 
-              paddingBottom: '0.5rem',
-              scrollbarWidth: 'none'
-            }}>
-              {daysOfWeek.filter(d => d !== 'Unknown').map(day => (
-                <button
-                  key={day}
-                  onClick={() => setSelectedDay(day)}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    borderRadius: '20px',
-                    border: 'none',
-                    fontWeight: 600,
-                    fontSize: '0.875rem',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    transition: 'all 0.2s ease',
-                    background: selectedDay === day ? 'var(--accent-color)' : 'var(--bg-secondary)',
-                    color: selectedDay === day ? 'var(--accent-text)' : 'var(--text-secondary)',
-                    boxShadow: selectedDay === day ? 'var(--shadow-md)' : 'none',
-                    borderBottom: selectedDay !== day ? '1px solid var(--border-color)' : 'none'
-                  }}
-                >
-                  {t(`day_${day}` as TranslationKey).substring(0, 3)}
-                </button>
-              ))}
-            </div>
-
-            {/* Selected Day Timeline - Flat */}
-            <div style={{ marginTop: '1rem' }}>
-              <div style={{ 
-                display: 'flex', flexDirection: 'column', 
-                background: 'var(--bg-secondary)', 
-                borderRadius: '12px', 
-                border: '1px solid var(--border-color)',
-                overflow: 'hidden'
-              }}>
-                {(!groupedSubjects[selectedDay] || groupedSubjects[selectedDay].length === 0) ? (
-                   <p style={{ color: 'var(--text-secondary)', padding: '1.5rem', textAlign: 'center', margin: 0 }}>{t('schedule_no_classes_on')} {t(`day_${selectedDay}` as TranslationKey)}.</p>
-                ) : (
-                  groupedSubjects[selectedDay].map((subject, idx) => (
-                    <div 
-                      key={subject.id} 
-                      onClick={() => { setSelectedSubject(subject); setActiveTab('subject-details'); }}
-                      style={{ 
-                        padding: '1rem', background: 'var(--bg-secondary)', 
-                        borderBottom: idx === groupedSubjects[selectedDay].length - 1 ? 'none' : '1px solid var(--border-color)', 
-                        cursor: 'pointer',
-                        transition: 'background-color 0.2s ease',
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-primary)'}
-                      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '1rem', marginBottom: '0.2rem' }}>{subject.name}</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><UserIcon size={12} /> {subject.teacher}</span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><MapPin size={12} /> {subject.room}</span>
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                          {subject.startTime}
-                        </div>
-                        <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
-                          - {subject.endTime}
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-
-          </div>
+          <ScheduleTab
+            t={t}
+            daysOfWeek={daysOfWeek}
+            selectedDay={selectedDay}
+            setSelectedDay={setSelectedDay}
+            groupedSubjects={groupedSubjects}
+            setSelectedSubject={setSelectedSubject}
+            setActiveTab={setActiveTab}
+          />
         )}
 
         {activeTab === 'analytics' && (
@@ -1416,7 +1205,7 @@ export function Dashboard({ user }: DashboardProps) {
                 <div style={{ padding: '0.5rem 0' }}>
                   <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0.5rem', fontWeight: 600 }}>{t('chat_active_now' as TranslationKey)}</h3>
                   <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', padding: '0.5rem', margin: '0 -0.5rem', scrollbarWidth: 'none' }}>
-                    {userList.filter(u => u.isOnline).map(u => (
+                    {userList.filter(u => u.isOnline && u.id !== user.uid).map(u => (
                       <div key={u.id} onClick={() => startPrivateChat(u.id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', cursor: 'pointer', flexShrink: 0 }}>
                         <div style={{ position: 'relative' }}>
                           <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--bg-secondary)', border: '2px solid var(--accent-color)', overflow: 'hidden', padding: '2px' }}>
@@ -1431,7 +1220,7 @@ export function Dashboard({ user }: DashboardProps) {
                         </span>
                       </div>
                     ))}
-                    {userList.filter(u => u.isOnline).length === 0 && (
+                    {userList.filter(u => u.isOnline && u.id !== user.uid).length === 0 && (
                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', padding: '1rem 0' }}>No friends active right now.</div>
                     )}
                   </div>
@@ -1464,7 +1253,7 @@ export function Dashboard({ user }: DashboardProps) {
                     </div>
 
                     {/* Friends Chats */}
-                    {userList.map((u, idx) => {
+                    {userList.filter(u => u.id !== user.uid).map((u, idx, arr) => {
                       const name = u.displayName || u.username || u.id;
                       const chatId = [user.uid, u.id].sort().join('_');
                       const unread = chatMetadata[chatId]?.unreadCount || 0;
@@ -1476,7 +1265,7 @@ export function Dashboard({ user }: DashboardProps) {
                           style={{ 
                             display: 'flex', alignItems: 'center', gap: '1rem', 
                             padding: '1rem', cursor: 'pointer',
-                            borderBottom: idx === userList.length - 1 ? 'none' : '1px solid var(--border-color)',
+                            borderBottom: idx === arr.length - 1 ? 'none' : '1px solid var(--border-color)',
                             transition: 'background-color 0.2s'
                           }}
                           onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-primary)'}
@@ -1725,231 +1514,46 @@ export function Dashboard({ user }: DashboardProps) {
         )}
 
         {activeTab === 'profile' && (
-          <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', maxWidth: '500px', margin: '0 auto', paddingBottom: '2rem' }}>
-            {profileLoading ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center', justifyContent: 'center', height: '300px' }}>
-                 <div className="animate-spin" style={{ width: '32px', height: '32px', border: '3px solid var(--border-color)', borderTopColor: 'var(--accent-color)', borderRadius: '50%' }} />
-                 <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Loading profile...</div>
-              </div>
-            ) : (
-              <>
-            {/* Header: Cover, Avatar, Name, Email */}
-            <div style={{ position: 'relative', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.5rem' }}>
-              {/* Gradient Cover */}
-              <div style={{ width: '100%', height: '140px', background: 'linear-gradient(135deg, var(--accent-color), color-mix(in srgb, var(--accent-color) 40%, #ff3b30))', borderRadius: '0 0 24px 24px', position: 'absolute', top: '-1rem', left: 0, zIndex: 0 }} />
-              
-              <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
-              
-              {/* Avatar overlapping */}
-              <div style={{ position: 'relative', marginTop: '70px', zIndex: 1 }}>
-                <div 
-                  onClick={() => !isUploadingAvatar && avatarInputRef.current?.click()}
-                  style={{ width: '110px', height: '110px', borderRadius: '50%', background: 'var(--bg-primary)', border: '4px solid var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', position: 'relative', boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}
-                >
-                  {avatarUrl ? (
-                    <img src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <UserCircle size={64} color="var(--text-secondary)" />
-                  )}
-                  {isUploadingAvatar && (
-                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ width: '28px', height: '28px', border: '3px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                    </div>
-                  )}
-                </div>
-                <button
-                  onClick={() => !isUploadingAvatar && avatarInputRef.current?.click()}
-                  style={{ position: 'absolute', bottom: '0', right: '0', width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent-color)', border: '3px solid var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }}
-                  title="Change photo"
-                >
-                  <Camera size={16} color="#fff" />
-                </button>
-              </div>
-
-              {avatarUrl && (
-                <button onClick={handleDeleteAvatar} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'none', border: 'none', color: '#ff3b30', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 500, marginTop: '0.75rem', zIndex: 1 }}>
-                  <Trash2 size={14} /> {t('profile_remove_photo')}
-                </button>
-              )}
-
-              <div style={{ textAlign: 'center', marginTop: '1rem', zIndex: 1 }}>
-                <h2 style={{ fontSize: '1.75rem', margin: '0 0 0.25rem 0', fontWeight: 700, color: 'var(--text-primary)' }}>{displayName}</h2>
-                <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.9rem', fontWeight: 500 }}>{user.email} &bull; {t('profile_student_account')}</p>
-              </div>
-            </div>
-
-            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              
-              {/* Account Settings Section */}
-              <div>
-                <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', marginLeft: '0.75rem', fontWeight: 600 }}>{t('profile_section_account')}</h3>
-                <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-                  
-                  {/* Display Name Item */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', borderBottom: '1px solid var(--border-color)' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Edit2 size={16} color="var(--accent-color)" />
-                    </div>
-                    {!editingDisplayName ? (
-                      <>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-primary)' }}>{t('profile_display_name')}</div>
-                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</div>
-                        </div>
-                        <button onClick={() => { setEditingDisplayName(true); setDisplayNameInput(displayName); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-color)', padding: '0.25rem' }}>
-                          <Edit2 size={18} />
-                        </button>
-                      </>
-                    ) : (
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        <input
-                          autoFocus
-                          value={displayNameInput}
-                          onChange={e => setDisplayNameInput(e.target.value)}
-                          className="input-field"
-                          placeholder={t('profile_enter_name')}
-                          maxLength={30}
-                          style={{ padding: '0.5rem', borderRadius: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
-                        />
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <button disabled={savingDisplayName || !displayNameInput.trim()} onClick={async () => {
-                            if (!displayNameInput.trim()) return;
-                            setSavingDisplayName(true);
-                            try {
-                              await setDoc(doc(db, 'users', user.uid), { displayName: displayNameInput.trim() }, { merge: true });
-                              setEditingDisplayName(false);
-                            } catch (err: any) { alert(`Failed to save: ${err.message}`); }
-                            finally { setSavingDisplayName(false); }
-                          }} className="btn btn-primary" style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem', borderRadius: '8px' }}>
-                            {savingDisplayName ? '...' : <><Check size={14} /> {t('profile_save')}</>}
-                          </button>
-                          <button onClick={() => setEditingDisplayName(false)} style={{ padding: '0.4rem 0.75rem', borderRadius: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.8rem' }}>{t('profile_cancel')}</button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Language Item */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Globe size={16} color="var(--accent-color)" />
-                      </div>
-                      <span style={{ fontSize: '0.95rem', fontWeight: 500 }}>{t('profile_language')}</span>
-                    </div>
-                    <select
-                      value={language}
-                      onChange={(e) => setLanguage(e.target.value as 'en' | 'th' | 'zh')}
-                      className="ios-select-inline"
-                    >
-                      <option value="th">ไทย</option>
-                      <option value="zh">中文</option>
-                      <option value="en">English</option>
-                    </select>
-                  </div>
-
-                  {/* Theme Item */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', borderTop: '1px solid var(--border-color)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Eye size={16} color="var(--accent-color)" />
-                      </div>
-                      <span style={{ fontSize: '0.95rem', fontWeight: 500 }}>{t('profile_theme_app')}</span>
-                    </div>
-                    <select
-                      value={theme}
-                      onChange={(e) => setTheme(e.target.value as 'system' | 'light' | 'dark' | 'white-pink')}
-                      className="ios-select-inline"
-                    >
-                      <option value="system">{t('profile_theme_system')}</option>
-                      <option value="light">{t('profile_theme_light')}</option>
-                      <option value="dark">{t('profile_theme_dark')}</option>
-                      <option value="white-pink">{t('profile_theme_white_pink')}</option>
-                    </select>
-                  </div>
-
-
-                </div>
-              </div>
-
-              {/* Security Section */}
-              <div>
-                <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', marginLeft: '0.75rem', fontWeight: 600 }}>{t('profile_section_security')}</h3>
-                {!showChangePassword ? (
-                  <div style={{ width: '100%', padding: '1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} onClick={() => setShowChangePassword(true)}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255, 59, 48, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Lock size={16} color="#ff3b30" />
-                      </div>
-                      <span style={{ fontSize: '0.95rem', fontWeight: 500 }}>{t('profile_change_password')}</span>
-                    </div>
-                    <ArrowLeft size={18} color="var(--text-secondary)" style={{ transform: 'rotate(180deg)' }} />
-                  </div>
-                ) : (
-                  <div style={{ width: '100%', padding: '1.25rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                      <button onClick={() => { setShowChangePassword(false); setPwMessage(null); setOldPassword(''); setNewPassword(''); setConfirmPassword(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
-                        <ArrowLeft size={20} />
-                      </button>
-                      <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <Lock size={16} color="#ff3b30" /> {t('profile_change_password')}
-                      </h3>
-                    </div>
-
-                    <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                      <div className="input-group">
-                        <label className="input-label" style={{ fontSize: '0.8rem' }}>{t('profile_old_password')}</label>
-                        <div style={{ position: 'relative' }}>
-                          <input type={showOldPw ? 'text' : 'password'} required value={oldPassword} onChange={e => setOldPassword(e.target.value)} className="input-field" placeholder="Enter old password" style={{ padding: '0.6rem', paddingRight: '2.5rem', fontSize: '0.9rem', borderRadius: '8px', background: 'var(--bg-primary)' }} />
-                          <button type="button" onClick={() => setShowOldPw(p => !p)} style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                            {showOldPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </button>
-                        </div>
-                      </div>
-                      <div className="input-group">
-                        <label className="input-label" style={{ fontSize: '0.8rem' }}>{t('profile_new_password')}</label>
-                        <div style={{ position: 'relative' }}>
-                          <input type={showNewPw ? 'text' : 'password'} required value={newPassword} onChange={e => setNewPassword(e.target.value)} className="input-field" placeholder="At least 6 characters" style={{ padding: '0.6rem', paddingRight: '2.5rem', fontSize: '0.9rem', borderRadius: '8px', background: 'var(--bg-primary)' }} />
-                          <button type="button" onClick={() => setShowNewPw(p => !p)} style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                            {showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </button>
-                        </div>
-                      </div>
-                      <div className="input-group">
-                        <label className="input-label" style={{ fontSize: '0.8rem' }}>{t('profile_confirm_password')}</label>
-                        <div style={{ position: 'relative' }}>
-                          <input type={showConfirmPw ? 'text' : 'password'} required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="input-field" placeholder="Repeat new password" style={{ padding: '0.6rem', paddingRight: '2.5rem', fontSize: '0.9rem', borderRadius: '8px', background: 'var(--bg-primary)' }} />
-                          <button type="button" onClick={() => setShowConfirmPw(p => !p)} style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                            {showConfirmPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </button>
-                        </div>
-                      </div>
-
-                      {pwMessage && (
-                        <div style={{ padding: '0.5rem', borderRadius: '8px', background: pwMessage.type === 'success' ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 59, 48, 0.1)', border: `1px solid ${pwMessage.type === 'success' ? '#34c759' : '#ff3b30'}`, color: pwMessage.type === 'success' ? '#34c759' : '#ff3b30', fontSize: '0.8rem' }}>
-                          {pwMessage.text}
-                        </div>
-                      )}
-
-                      <Button type="submit" variant="primary" isLoading={pwLoading} style={{ marginTop: '0.5rem', padding: '0.75rem', fontSize: '0.95rem', justifyContent: 'center', borderRadius: '8px' }}>
-                        {t('profile_save')}
-                      </Button>
-                    </form>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <button 
-              onClick={handleSignOut} 
-              disabled={loading}
-              style={{ width: '100%', padding: '1rem', marginTop: '0.5rem', borderRadius: '16px', border: '1px solid rgba(255, 59, 48, 0.3)', background: 'rgba(255, 59, 48, 0.05)', color: '#ff3b30', fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', cursor: 'pointer', transition: 'background-color 0.2s', opacity: loading ? 0.7 : 1 }}
-            >
-              <LogOut size={18} /> {t('profile_sign_out')}
-            </button>
-              </>
-            )}
-          </div>
+          <SettingsTab
+            user={user}
+            t={t}
+            avatarUrl={avatarUrl}
+            isUploadingAvatar={isUploadingAvatar}
+            avatarInputRef={avatarInputRef}
+            handleAvatarUpload={handleAvatarUpload}
+            handleDeleteAvatar={handleDeleteAvatar}
+            editingDisplayName={editingDisplayName}
+            setEditingDisplayName={setEditingDisplayName}
+            displayName={displayName}
+            displayNameInput={displayNameInput}
+            setDisplayNameInput={setDisplayNameInput}
+            savingDisplayName={savingDisplayName}
+            handleSaveDisplayName={handleSaveDisplayName}
+            language={language}
+            setLanguage={setLanguage}
+            theme={theme}
+            setTheme={setTheme}
+            showChangePassword={showChangePassword}
+            setShowChangePassword={setShowChangePassword}
+            oldPassword={oldPassword}
+            setOldPassword={setOldPassword}
+            showOldPw={showOldPw}
+            setShowOldPw={setShowOldPw}
+            newPassword={newPassword}
+            setNewPassword={setNewPassword}
+            showNewPw={showNewPw}
+            setShowNewPw={setShowNewPw}
+            confirmPassword={confirmPassword}
+            setConfirmPassword={setConfirmPassword}
+            showConfirmPw={showConfirmPw}
+            setShowConfirmPw={setShowConfirmPw}
+            pwMessage={pwMessage}
+            setPwMessage={setPwMessage}
+            pwLoading={pwLoading}
+            handleChangePassword={handleChangePassword}
+            handleSignOut={handleSignOut}
+            loading={loading}
+          />
         )}
 
         {activeTab === 'subject-details' && selectedSubject && (
@@ -1961,7 +1565,7 @@ export function Dashboard({ user }: DashboardProps) {
               <ArrowLeft size={18} /> Back
             </button>
 
-            <Card style={{ padding: '1.5rem', background: 'var(--bg-secondary)', borderLeft: '4px solid var(--accent-color)' }}>
+            <div className='ios-list-group' style={{ padding: '1.5rem', background: 'var(--bg-secondary)', borderLeft: '4px solid var(--accent-color)' }}>
               <h2 style={{ fontSize: '1.5rem', margin: '0 0 1rem 0' }}>{selectedSubject.name}</h2>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
@@ -1995,7 +1599,7 @@ export function Dashboard({ user }: DashboardProps) {
                   <PlusCircle size={14} style={{ marginRight: '0.25rem' }} /> {canAddHomework ? t('add_homework' as TranslationKey) : t('suggest_homework')}
                 </Button>
               </div>
-            </Card>
+            </div>
 
             {(() => {
               const subjectRequests = homeworkRequests.filter(req => req.subjectId === selectedSubject.id);
@@ -2095,9 +1699,9 @@ export function Dashboard({ user }: DashboardProps) {
 
                 if (filteredHw.length === 0) {
                   return (
-                    <Card style={{ padding: '2rem', textAlign: 'center', background: 'var(--bg-secondary)' }}>
+                    <div className='ios-list-group' style={{ padding: '2rem', textAlign: 'center', background: 'var(--bg-secondary)' }}>
                       <p style={{ color: 'var(--text-secondary)', margin: 0 }}>{t('hw_no_homework_in_tab')}</p>
-                    </Card>
+                    </div>
                   );
                 }
                 return (
@@ -2147,7 +1751,7 @@ export function Dashboard({ user }: DashboardProps) {
       {/* Suggest Homework Modal overlaying everything */}
       {showSuggestForm && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} className="animate-fade-in">
-          <Card style={{ padding: '1.5rem', width: '100%', maxWidth: '400px', margin: '1rem', background: 'var(--bg-primary)', border: '1px solid var(--accent-color)' }}>
+          <div className='ios-list-group' style={{ padding: '1.5rem', width: '100%', maxWidth: '400px', margin: '1rem', background: 'var(--bg-primary)', border: '1px solid var(--accent-color)' }}>
             <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <PlusCircle size={20} /> {t('suggest_homework')}
             </h3>
@@ -2174,7 +1778,7 @@ export function Dashboard({ user }: DashboardProps) {
                 <Button type="button" variant="secondary" onClick={() => setShowSuggestForm(false)}>{t('form_cancel')}</Button>
               </div>
             </form>
-          </Card>
+          </div>
         </div>
       )}
 
@@ -2200,7 +1804,7 @@ export function Dashboard({ user }: DashboardProps) {
             {searchQuery.trim() === '' ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '800px', margin: '0 auto', paddingTop: '1rem', width: '100%' }}>
                 {/* Stats */}
-                <Card style={{ padding: '1.5rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+                <div className='ios-list-group' style={{ padding: '1.5rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
                   <h3 style={{ fontSize: '1rem', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <BarChart2 size={18} color="var(--accent-color)" /> Quick Stats
                   </h3>
@@ -2218,7 +1822,7 @@ export function Dashboard({ user }: DashboardProps) {
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Pending</div>
                     </div>
                   </div>
-                </Card>
+                </div>
 
                 {/* To-Do List (Pending Homework) */}
                 <div>
@@ -2486,7 +2090,7 @@ const navBtnStyle = (isActive: boolean): React.CSSProperties => ({
   flex: 1
 });
 
-const CompletedByAvatars = ({ homeworkId, allCompleted, users }: { homeworkId: string, allCompleted: {userId: string, homeworkId: string}[], users: any[] }) => {
+export const CompletedByAvatars = ({ homeworkId, allCompleted, users }: { homeworkId: string, allCompleted: {userId: string, homeworkId: string}[], users: any[] }) => {
   const completedUsers = allCompleted.filter(c => c.homeworkId === homeworkId);
   if (completedUsers.length === 0) return null;
 

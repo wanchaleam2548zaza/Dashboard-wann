@@ -2,8 +2,6 @@ import { useState } from 'react';
 import { auth } from '../firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { Card } from '../components/ui/Card';
 import { ShieldAlert } from 'lucide-react';
 
 interface LoginProps {
@@ -40,33 +38,38 @@ export function Login({ onAdminLogin }: LoginProps) {
     <div className="app-container" style={{ justifyContent: 'center' }}>
       <main className="main-content">
         <div style={{ textAlign: 'center', marginBottom: '2rem' }} className="animate-slide-up">
-          <ShieldAlert size={48} style={{ margin: '0 auto 1rem' }} />
+          <ShieldAlert size={48} style={{ margin: '0 auto 1rem', color: 'var(--accent-color)' }} />
           <h1>Welcome Back</h1>
           <p>Enter your credentials to access the dashboard</p>
         </div>
 
-        <Card className="animate-slide-up delay-100">
+        <div className="animate-slide-up delay-100 ios-list-group">
           <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <Input
-              label="Username"
-              type="text"
-              placeholder="Enter your username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-            />
-
-            <Input
-              label="Password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <div className="ios-list">
+              <div className="ios-list-item" style={{ padding: '0' }}>
+                <input
+                  type="text"
+                  placeholder="Username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  style={{ width: '100%', border: 'none', background: 'transparent', padding: '1rem', color: 'var(--text-primary)', outline: 'none', fontSize: '1rem' }}
+                />
+              </div>
+              <div className="ios-list-item" style={{ padding: '0' }}>
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  style={{ width: '100%', border: 'none', background: 'transparent', padding: '1rem', color: 'var(--text-primary)', outline: 'none', fontSize: '1rem' }}
+                />
+              </div>
+            </div>
 
             {error && (
-              <div style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '-0.5rem', textAlign: 'center' }}>
+              <div style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.5rem', textAlign: 'center' }}>
                 {error}
               </div>
             )}
@@ -75,7 +78,7 @@ export function Login({ onAdminLogin }: LoginProps) {
               Sign In
             </Button>
           </form>
-        </Card>
+        </div>
       </main>
     </div>
   );
