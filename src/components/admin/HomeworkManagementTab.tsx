@@ -4,25 +4,9 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { db } from '../../firebase';
 import { doc, updateDoc, addDoc, collection } from 'firebase/firestore';
-import { CompletedByAvatars } from '../../pages/Dashboard';
+import { CompletedByAvatars } from '../ui/CompletedByAvatars';
 
-interface SubjectData {
-  id: string;
-  name: string;
-  teacher: string;
-  room: string;
-  day?: string;
-  startTime?: string;
-  endTime?: string;
-  createdAt: string;
-}
-
-interface HomeworkData {
-  id: string;
-  title: string;
-  subjectId: string;
-  dueDate: string;
-}
+import type { SubjectData, HomeworkData } from '../../types';
 
 interface HomeworkManagementTabProps {
   quickEditSubject: SubjectData;

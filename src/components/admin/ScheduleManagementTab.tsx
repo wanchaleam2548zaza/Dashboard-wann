@@ -3,22 +3,7 @@ import { Users, Calendar, PlusCircle, BookOpen } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 
-interface UserData {
-  id: string;
-  username: string;
-  isOnline: boolean;
-}
-
-interface SubjectData {
-  id: string;
-  name: string;
-  teacher: string;
-  room: string;
-  day?: string;
-  startTime?: string;
-  endTime?: string;
-  createdAt: string;
-}
+import type { UserData, SubjectData } from '../../types';
 
 interface ScheduleManagementTabProps {
   userList: UserData[];

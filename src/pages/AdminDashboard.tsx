@@ -3,57 +3,21 @@ import { secondaryAuth, db } from '../firebase';
 import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { collection, onSnapshot, setDoc, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { Button } from '../components/ui/Button';
-import { Shield, Users, LogOut, LayoutDashboard, BookOpen, CheckSquare, BarChart2, Bell, Search, X, Menu } from 'lucide-react';
+import { Shield, Users, LogOut, LayoutDashboard, BookOpen, CheckSquare, BarChart2, Bell, Search, X, Megaphone } from 'lucide-react';
 import { UserManagementTab } from '../components/admin/UserManagementTab';
 import { ScheduleManagementTab } from '../components/admin/ScheduleManagementTab';
 import { HomeworkManagementTab } from '../components/admin/HomeworkManagementTab';
+import { BroadcastTab } from '../components/admin/BroadcastTab';
+import type { UserData, SubjectData, HomeworkData, HomeworkRequestData } from '../types';
+
 interface AdminDashboardProps {
   onLogout: () => void;
 }
 
-interface UserData {
-  id: string;
-  username: string;
-  displayName?: string;
-  avatarUrl?: string;
-  isOnline: boolean;
-  createdAt: string;
-  canAddHomework?: boolean;
-}
-
-interface SubjectData {
-  id: string;
-  name: string;
-  teacher: string;
-  room: string;
-  day?: string;
-  startTime?: string;
-  endTime?: string;
-  createdAt: string;
-}
-
-interface HomeworkData {
-  id: string;
-  title: string;
-  subjectId: string;
-  dueDate: string;
-  createdAt: string;
-}
-
-export interface HomeworkRequestData {
-  id: string;
-  title: string;
-  subjectId: string;
-  dueDate: string;
-  userId: string;
-  username: string;
-  status: 'pending' | 'approved' | 'denied';
-  createdAt: string;
-}
 
 export function AdminDashboard({ onLogout }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'subjects' | 'homework' | 'analytics' | 'subject-details' | 'notifications'>('overview');
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'subjects' | 'homework' | 'analytics' | 'subject-details' | 'notifications' | 'broadcasts'>('overview');
+
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -325,36 +289,58 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
   const mostActiveSubject = subjectHwCounts.length > 0 && subjectHwCounts[0].count > 0 ? subjectHwCounts[0] : null;
 
   return (
-    <div className="app-container" style={{ paddingBottom: '70px' }}>
-      <header style={{
-        padding: '1.5rem',
-        borderBottom: '1px solid var(--border-color)',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        position: 'sticky',
-        top: 0,
-        backgroundColor: 'var(--bg-primary)',
-        zIndex: 10
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <button onClick={() => setIsMenuOpen(true)} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex' }} title="Menu">
-            <Menu size={24} />
-          </button>
-          <Shield size={24} color="var(--accent-color)" />
-          <h1 style={{ margin: 0, fontSize: '1.25rem' }}>Admin</h1>
+    <div className="admin-desktop-layout">
+      {/* Sidebar */}
+      <aside className="admin-sidebar">
+        <div className="admin-sidebar-header">
+          <Shield size={36} color="var(--accent-color)" style={{ margin: '0 auto 0.5rem auto' }} />
+          <h1 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-primary)' }}>Admin Panel</h1>
         </div>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <button onClick={() => setShowSearch(true)} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex' }} title="Search">
-            <Search size={22} />
+        
+        <nav className="admin-sidebar-nav">
+          <button onClick={() => setActiveTab('overview')} className={`admin-sidebar-btn ${activeTab === 'overview' ? 'active' : ''}`}>
+            <LayoutDashboard size={20} /> Overview
           </button>
-          <button onClick={onLogout} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex' }} title="Sign Out">
-            <LogOut size={22} />
+          
+          <button onClick={() => setActiveTab('notifications')} className={`admin-sidebar-btn ${activeTab === 'notifications' ? 'active' : ''}`}>
+            <div style={{ position: 'relative' }}>
+              <Bell size={20} />
+              {homeworkRequests.filter(r => r.status === 'pending').length > 0 && (
+                <div style={{ position: 'absolute', top: '-4px', right: '-8px', background: '#ef4444', color: 'white', fontSize: '0.65rem', fontWeight: 700, minWidth: '16px', height: '16px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 0.2rem', border: '2px solid var(--bg-secondary)' }}>
+                  {homeworkRequests.filter(r => r.status === 'pending').length > 99 ? '99+' : homeworkRequests.filter(r => r.status === 'pending').length}
+                </div>
+              )}
+            </div>
+            Alerts
           </button>
-        </div>
-      </header>
+          
+          <button onClick={() => setActiveTab('users')} className={`admin-sidebar-btn ${activeTab === 'users' ? 'active' : ''}`}>
+            <Users size={20} /> Users
+          </button>
 
-      <main className="main-content" style={{ padding: '1rem', width: '100%', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <button onClick={() => setActiveTab('broadcasts')} className={`admin-sidebar-btn ${activeTab === 'broadcasts' ? 'active' : ''}`}>
+            <Megaphone size={20} /> Broadcasts
+          </button>
+
+          <button onClick={() => setActiveTab('analytics')} className={`admin-sidebar-btn ${activeTab === 'analytics' ? 'active' : ''}`}>
+            <BarChart2 size={20} /> Analytics
+          </button>
+        </nav>
+
+        <div style={{ marginTop: 'auto' }}>
+          <button onClick={onLogout} className="admin-sidebar-btn" style={{ width: '100%', color: '#ff3b30' }}>
+            <LogOut size={20} /> Sign Out
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <main className="admin-main">
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
+          <button onClick={() => setShowSearch(true)} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: '100px', padding: '0.5rem 1.5rem', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)' }}>
+            <Search size={18} /> Search
+          </button>
+        </div>
 
         {activeTab === 'overview' && (
           <ScheduleManagementTab
@@ -392,6 +378,10 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
             loading={loading}
             userList={userList}
           />
+        )}
+
+        {activeTab === 'broadcasts' && (
+          <BroadcastTab />
         )}
 
         {activeTab === 'subject-details' && quickEditSubject && (
@@ -659,80 +649,11 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
         </div>
       )}
 
-      {/* Hamburger Sidebar Menu */}
-      {isMenuOpen && (
-        <>
-          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 2000 }} onClick={() => setIsMenuOpen(false)} className="animate-fade-in" />
-          <div style={{ position: 'fixed', top: 0, bottom: 0, left: 0, width: '280px', backgroundColor: 'var(--bg-primary)', zIndex: 2001, transform: 'translateX(0)', transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)', borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column' }} className="animate-slide-up">
-            <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Admin Menu</h2>
-              <button onClick={() => setIsMenuOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={24} /></button>
-            </div>
-            <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <button onClick={() => { setActiveTab('analytics'); setIsMenuOpen(false); }} className="btn btn-secondary" style={{ display: 'flex', justifyContent: 'flex-start', border: 'none', background: activeTab === 'analytics' ? 'var(--bg-secondary)' : 'transparent', padding: '1rem', borderRadius: '12px', alignItems: 'center' }}>
-                <BarChart2 size={20} style={{ color: activeTab === 'analytics' ? 'var(--accent-color)' : 'var(--text-primary)' }} />
-                <span style={{ color: activeTab === 'analytics' ? 'var(--accent-color)' : 'var(--text-primary)', fontWeight: 500 }}>Analytics</span>
-              </button>
-            </div>
-          </div>
-        </>
-      )}
 
-      {/* Bottom Navigation */}
-      <nav style={{
-        position: 'fixed',
-        bottom: 0,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: '100%',
-        maxWidth: '480px',
-        backgroundColor: 'var(--bg-secondary)',
-        borderTop: '1px solid var(--border-color)',
-        display: 'flex',
-        justifyContent: 'space-around',
-        padding: '0.75rem 0.5rem',
-        paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))',
-        zIndex: 100,
-        boxShadow: '0 -4px 6px -1px rgba(0, 0, 0, 0.05)'
-      }}>
-        <button onClick={() => setActiveTab('overview')} style={navBtnStyle(activeTab === 'overview')}>
-          <LayoutDashboard size={20} />
-          <span>Overview</span>
-        </button>
-        <button onClick={() => setActiveTab('notifications')} style={navBtnStyle(activeTab === 'notifications')}>
-          <div style={{ position: 'relative' }}>
-            <Bell size={20} />
-            {homeworkRequests.filter(r => r.status === 'pending').length > 0 && (
-              <div style={{ position: 'absolute', top: '-4px', right: '-8px', background: '#ef4444', color: 'white', fontSize: '0.65rem', fontWeight: 700, minWidth: '16px', height: '16px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 0.2rem', border: '2px solid var(--bg-secondary)' }}>
-                {homeworkRequests.filter(r => r.status === 'pending').length > 99 ? '99+' : homeworkRequests.filter(r => r.status === 'pending').length}
-              </div>
-            )}
-          </div>
-          <span>Alerts</span>
-        </button>
-        <button onClick={() => setActiveTab('users')} style={navBtnStyle(activeTab === 'users')}>
-          <Users size={20} />
-          <span>Users</span>
-        </button>
-      </nav>
 
     </div>
   );
 }
 
-const navBtnStyle = (isActive: boolean): React.CSSProperties => ({
-  background: 'none',
-  border: 'none',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  gap: '0.25rem',
-  color: isActive ? 'var(--accent-color)' : 'var(--text-secondary)',
-  cursor: 'pointer',
-  padding: '0.25rem',
-  fontSize: '0.75rem',
-  fontWeight: isActive ? 600 : 500,
-  transition: 'color 0.2s',
-  flex: 1
-});
+
 

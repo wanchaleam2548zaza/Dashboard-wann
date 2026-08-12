@@ -11,6 +11,8 @@ import type { TranslationKey } from '../translations';
 import { ScheduleTab } from '../components/dashboard/ScheduleTab';
 import { SettingsTab } from '../components/dashboard/SettingsTab';
 import { HomeworkTab } from '../components/dashboard/HomeworkTab';
+import type { SubjectData, UserData, HomeworkData, CalendarEventData, HomeworkRequestData, MessageData } from '../types';
+import { CompletedByAvatars } from '../components/ui/CompletedByAvatars';
 
 interface DashboardProps {
   user: FirebaseUser;
@@ -33,68 +35,7 @@ const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month
 const DAYS_EN = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 const DAYS_TH = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
 
-export interface SubjectData {
-  id: string;
-  name: string;
-  teacher: string;
-  room: string;
-  day?: string;
-  startTime?: string;
-  endTime?: string;
-  createdAt: string;
-}
 
-export interface UserData {
-  id: string;
-  username: string;
-  displayName?: string;
-  avatarUrl?: string;
-  isOnline: boolean;
-  createdAt: string;
-}
-
-interface HomeworkData {
-  id: string;
-  title: string;
-  subjectId: string;
-  dueDate: string;
-  createdAt: string;
-}
-
-interface CalendarEventData {
-  id: string;
-  userId: string;
-  date: string;
-  title: string;
-  color: string;
-  createdAt: string;
-}
-
-export interface HomeworkRequestData {
-  id: string;
-  title: string;
-  subjectId: string;
-  dueDate: string;
-  userId: string;
-  username: string;
-  status: 'pending' | 'approved' | 'denied';
-  createdAt: string;
-}
-
-export interface MessageData {
-  id: string;
-  chatId: string;
-  senderId: string;
-  senderName: string;
-  text: string;
-  createdAt: string;
-  isEdited?: boolean;
-  replyTo?: {
-    id: string;
-    text: string;
-    senderName: string;
-  };
-}
 
 export function Dashboard({ user }: DashboardProps) {
   const { t, language, setLanguage } = useLanguage();
@@ -855,153 +796,154 @@ export function Dashboard({ user }: DashboardProps) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
               
               {/* Clock & Weather Widget (Left) */}
-              <div style={{ 
-                background: 'var(--bg-secondary)', 
-                borderRadius: '24px', 
-                padding: '1.25rem', 
-                display: 'flex', 
-                flexDirection: 'column', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                border: '1px solid var(--border-color)',
-                boxShadow: '0 10px 30px -10px rgba(0,0,0,0.1)',
-                position: 'relative',
-                overflow: 'hidden'
-              }}>
-                {/* Decorative glows */}
-                <div style={{ position: 'absolute', top: '-15px', left: '-15px', width: '70px', height: '70px', background: 'var(--accent-color)', opacity: 0.15, borderRadius: '50%', filter: 'blur(30px)' }} />
-                <div style={{ position: 'absolute', bottom: '-15px', right: '-15px', width: '90px', height: '90px', background: '#3b82f6', opacity: 0.15, borderRadius: '50%', filter: 'blur(30px)' }} />
-                
-                <div style={{ fontSize: '2.5rem', fontWeight: 800, letterSpacing: '-1.5px', color: 'var(--text-primary)', lineHeight: 1.1, marginBottom: '0.15rem', zIndex: 1 }}>
-                  {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                </div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '1rem', zIndex: 1 }}>
-                  {currentTime.toLocaleDateString(t('nav_home') === 'หน้าหลัก' ? 'th-TH' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                </div>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', zIndex: 1, width: '100%' }}>
-                  {weatherLoading ? (
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', textAlign: 'center', width: '100%' }}>Loading...</div>
-                  ) : weatherData ? (
-                    <>
-                      {/* Location spanning both */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', background: 'var(--bg-primary)', padding: '0.35rem 0.5rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                        <MapPin size={12} color="var(--text-secondary)" /> 
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{locationName}</span>
-                      </div>
-                      
-                      {/* Two Cards Row */}
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        {/* Temperature Card */}
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: 'var(--bg-primary)', padding: '0.5rem', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-                          {getWeatherDetails(weatherData.code).icon}
-                          <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>
-                            {weatherData.temp}°C
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, paddingLeft: '0.5rem' }}>
+                  <Clock size={18} /> {t('nav_home') === 'หน้าหลัก' ? 'เวลาและสภาพอากาศ' : 'Time & Weather'}
+                </h3>
+                <div style={{ 
+                  background: 'var(--bg-secondary)', 
+                  borderRadius: '24px', 
+                  padding: '1.25rem', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  border: '1px solid var(--border-color)',
+                  boxShadow: '0 10px 30px -10px rgba(0,0,0,0.1)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  flex: 1
+                }}>
+                  {/* Decorative glows */}
+                  <div style={{ position: 'absolute', top: '-15px', left: '-15px', width: '70px', height: '70px', background: 'var(--accent-color)', opacity: 0.15, borderRadius: '50%', filter: 'blur(30px)' }} />
+                  <div style={{ position: 'absolute', bottom: '-15px', right: '-15px', width: '90px', height: '90px', background: '#3b82f6', opacity: 0.15, borderRadius: '50%', filter: 'blur(30px)' }} />
+                  
+                  <div style={{ fontSize: '2.5rem', fontWeight: 800, letterSpacing: '-1.5px', color: 'var(--text-primary)', lineHeight: 1.1, marginBottom: '0.15rem', zIndex: 1 }}>
+                    {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </div>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '1rem', zIndex: 1 }}>
+                    {currentTime.toLocaleDateString(t('nav_home') === 'หน้าหลัก' ? 'th-TH' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', zIndex: 1, width: '100%' }}>
+                    {weatherLoading ? (
+                      <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', textAlign: 'center', width: '100%' }}>Loading...</div>
+                    ) : weatherData ? (
+                      <>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', background: 'var(--bg-primary)', padding: '0.35rem 0.5rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                          <MapPin size={12} color="var(--text-secondary)" /> 
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{locationName}</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: 'var(--bg-primary)', padding: '0.5rem', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
+                            {getWeatherDetails(weatherData.code).icon}
+                            <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>
+                              {weatherData.temp}°C
+                            </div>
+                          </div>
+                          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', padding: '0.5rem', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
+                            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', textAlign: 'center' }}>
+                              {t(getWeatherDetails(weatherData.code).descKey)}
+                            </div>
                           </div>
                         </div>
-                        {/* Condition Card */}
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', padding: '0.5rem', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-                          <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', textAlign: 'center' }}>
-                            {t(getWeatherDetails(weatherData.code).descKey)}
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', textAlign: 'center', width: '100%' }}>Unavailable</div>
+                      </>
+                    ) : (
+                      <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', textAlign: 'center', width: '100%' }}>Unavailable</div>
+                    )}
+                  </div>
+
+                  {hasGpsError && (
+                    <div style={{ fontSize: '0.75rem', color: '#ff3b30', marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', zIndex: 1 }}>
+                      <Map size={14} /> {t('home_gps_error' as TranslationKey)}
+                    </div>
                   )}
                 </div>
-
-                {hasGpsError && (
-                  <div style={{ fontSize: '0.75rem', color: '#ff3b30', marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', zIndex: 1 }}>
-                    <Map size={14} /> {t('home_gps_error' as TranslationKey)}
-                  </div>
-                )}
               </div>
 
               {/* Calendar Widget (Right) */}
-              <div style={{ 
-                background: 'var(--bg-secondary)', 
-                borderRadius: '24px', 
-                padding: '1rem', 
-                border: '1px solid var(--border-color)',
-                boxShadow: '0 10px 30px -10px rgba(0,0,0,0.1)',
-                display: 'flex',
-                flexDirection: 'column'
-              }}>
-                {/* Calendar Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', padding: '0 0.5rem' }}>
-                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                    {currentTime.toLocaleDateString(t('nav_home') === 'หน้าหลัก' ? 'th-TH' : 'en-US', { month: 'long', year: 'numeric' })}
-                  </h3>
-                </div>
-                
-                {/* Days of week */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.15rem', marginBottom: '0.5rem' }}>
-                  {(t('nav_home') === 'หน้าหลัก' ? DAYS_TH : DAYS_EN).map((day, idx) => (
-                    <div key={idx} style={{ textAlign: 'center', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                      {day}
-                    </div>
-                  ))}
-                </div>
-                
-                {/* Calendar Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.15rem', flex: 1, alignContent: 'start' }}>
-                  {/* Empty slots for first day */}
-                  {Array.from({ length: getFirstDayOfMonth(currentTime.getFullYear(), currentTime.getMonth()) }).map((_, i) => (
-                    <div key={`empty-${i}`} style={{ aspectRatio: '1' }} />
-                  ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, paddingLeft: '0.5rem' }}>
+                  <Calendar size={18} /> {t('nav_home') === 'หน้าหลัก' ? 'ปฏิทิน' : 'Calendar'}
+                </h3>
+                <div style={{ 
+                  background: 'var(--bg-secondary)', 
+                  borderRadius: '24px', 
+                  padding: '1rem', 
+                  border: '1px solid var(--border-color)',
+                  boxShadow: '0 10px 30px -10px rgba(0,0,0,0.1)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  flex: 1
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', padding: '0 0.5rem' }}>
+                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      {currentTime.toLocaleDateString(t('nav_home') === 'หน้าหลัก' ? 'th-TH' : 'en-US', { month: 'long', year: 'numeric' })}
+                    </h3>
+                  </div>
                   
-                  {/* Days */}
-                  {Array.from({ length: getDaysInMonth(currentTime.getFullYear(), currentTime.getMonth()) }).map((_, i) => {
-                    const day = i + 1;
-                    const isToday = day === currentTime.getDate();
-                    
-                    const yyyy = currentTime.getFullYear();
-                    const mm = String(currentTime.getMonth() + 1).padStart(2, '0');
-                    const dd = String(day).padStart(2, '0');
-                    const dateStr = `${yyyy}-${mm}-${dd}`;
-                    const dayEvents = calendarEvents.filter(e => e.date === dateStr);
-                    
-                    return (
-                      <div 
-                        key={day}
-                        onClick={() => {
-                          setSelectedDate(dateStr);
-                          setShowEventModal(true);
-                        }}
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          aspectRatio: '1',
-                          borderRadius: '12px',
-                          fontWeight: isToday ? 700 : 500,
-                          color: isToday ? '#fff' : 'var(--text-primary)',
-                          background: isToday ? 'var(--accent-color)' : (dayEvents.length > 0 ? 'var(--bg-primary)' : 'transparent'),
-                          boxShadow: isToday ? '0 4px 10px rgba(0,0,0,0.1)' : 'none',
-                          cursor: 'pointer',
-                          transition: 'background-color 0.2s',
-                        }}
-                        onMouseEnter={(e) => { if (!isToday) e.currentTarget.style.backgroundColor = 'var(--bg-primary)'; }}
-                        onMouseLeave={(e) => { if (!isToday) e.currentTarget.style.backgroundColor = dayEvents.length > 0 ? 'var(--bg-primary)' : 'transparent'; }}
-                      >
-                        <span style={{ fontSize: '0.8rem', lineHeight: 1 }}>{day}</span>
-                        {dayEvents.length > 0 && (
-                          <div style={{ display: 'flex', gap: '2px', marginTop: '2px', flexWrap: 'wrap', justifyContent: 'center', maxWidth: '80%' }}>
-                            {dayEvents.slice(0, 3).map((ev, idx) => (
-                              <div key={idx} style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: ev.color }} />
-                            ))}
-                            {dayEvents.length > 3 && <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'var(--text-secondary)' }} />}
-                          </div>
-                        )}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.15rem', marginBottom: '0.5rem' }}>
+                    {(t('nav_home') === 'หน้าหลัก' ? DAYS_TH : DAYS_EN).map((day, idx) => (
+                      <div key={idx} style={{ textAlign: 'center', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                        {day}
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.15rem', flex: 1, alignContent: 'start' }}>
+                    {Array.from({ length: getFirstDayOfMonth(currentTime.getFullYear(), currentTime.getMonth()) }).map((_, i) => (
+                      <div key={`empty-${i}`} style={{ aspectRatio: '1' }} />
+                    ))}
+                    
+                    {Array.from({ length: getDaysInMonth(currentTime.getFullYear(), currentTime.getMonth()) }).map((_, i) => {
+                      const day = i + 1;
+                      const isToday = day === currentTime.getDate();
+                      
+                      const yyyy = currentTime.getFullYear();
+                      const mm = String(currentTime.getMonth() + 1).padStart(2, '0');
+                      const dd = String(day).padStart(2, '0');
+                      const dateStr = `${yyyy}-${mm}-${dd}`;
+                      const dayEvents = calendarEvents.filter(e => e.date === dateStr);
+                      
+                      return (
+                        <div 
+                          key={day}
+                          onClick={() => {
+                            setSelectedDate(dateStr);
+                            setShowEventModal(true);
+                          }}
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            aspectRatio: '1',
+                            borderRadius: '12px',
+                            fontWeight: isToday ? 700 : 500,
+                            color: isToday ? '#fff' : 'var(--text-primary)',
+                            background: isToday ? 'var(--accent-color)' : (dayEvents.length > 0 ? 'var(--bg-primary)' : 'transparent'),
+                            boxShadow: isToday ? '0 4px 10px rgba(0,0,0,0.1)' : 'none',
+                            cursor: 'pointer',
+                            transition: 'background-color 0.2s',
+                          }}
+                          onMouseEnter={(e) => { if (!isToday) e.currentTarget.style.backgroundColor = 'var(--bg-primary)'; }}
+                          onMouseLeave={(e) => { if (!isToday) e.currentTarget.style.backgroundColor = dayEvents.length > 0 ? 'var(--bg-primary)' : 'transparent'; }}
+                        >
+                          <span style={{ fontSize: '0.8rem', lineHeight: 1 }}>{day}</span>
+                          {dayEvents.length > 0 && (
+                            <div style={{ display: 'flex', gap: '2px', marginTop: '2px', flexWrap: 'wrap', justifyContent: 'center', maxWidth: '80%' }}>
+                              {dayEvents.slice(0, 3).map((ev, idx) => (
+                                <div key={idx} style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: ev.color }} />
+                              ))}
+                              {dayEvents.length > 3 && <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'var(--text-secondary)' }} />}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-
             </div>
 
             {/* Event Modal */}
@@ -2090,56 +2032,4 @@ const navBtnStyle = (isActive: boolean): React.CSSProperties => ({
   flex: 1
 });
 
-export const CompletedByAvatars = ({ homeworkId, allCompleted, users }: { homeworkId: string, allCompleted: {userId: string, homeworkId: string}[], users: any[] }) => {
-  const completedUsers = allCompleted.filter(c => c.homeworkId === homeworkId);
-  if (completedUsers.length === 0) return null;
 
-  const maxToShow = 4;
-  const avatarsToShow = completedUsers.slice(0, maxToShow);
-  const extraCount = completedUsers.length - maxToShow;
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', marginTop: '0.75rem' }}>
-      {avatarsToShow.map((cu, idx) => {
-        const u = users.find(user => user.id === cu.userId);
-        if (!u || !u.avatarUrl) return null;
-        return (
-          <img 
-            key={cu.userId} 
-            src={u.avatarUrl} 
-            title={u.displayName || u.username}
-            style={{ 
-              width: '26px', 
-              height: '26px', 
-              borderRadius: '50%', 
-              border: '2px solid var(--bg-secondary)', 
-              marginLeft: idx === 0 ? 0 : '-10px',
-              objectFit: 'cover',
-              zIndex: 10 - idx
-            }} 
-            alt={u.username} 
-          />
-        );
-      })}
-      {extraCount > 0 && (
-        <div style={{
-          width: '26px', 
-          height: '26px', 
-          borderRadius: '50%', 
-          border: '2px solid var(--bg-secondary)', 
-          marginLeft: '-10px',
-          background: 'var(--bg-primary)',
-          color: 'var(--text-secondary)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '0.7rem',
-          fontWeight: 600,
-          zIndex: 0
-        }}>
-          +{extraCount}
-        </div>
-      )}
-    </div>
-  );
-};

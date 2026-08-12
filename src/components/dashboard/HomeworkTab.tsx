@@ -1,16 +1,8 @@
 import { useState } from 'react';
 import { Calendar, CheckCircle2, ArrowDownUp } from 'lucide-react';
 import type { TranslationKey } from '../../translations';
-import { CompletedByAvatars } from '../../pages/Dashboard';
-import type { SubjectData } from '../../pages/Dashboard';
-
-interface HomeworkData {
-  id: string;
-  title: string;
-  subjectId: string;
-  dueDate: string;
-  createdAt: string;
-}
+import { CompletedByAvatars } from '../ui/CompletedByAvatars';
+import type { SubjectData, HomeworkData } from '../../types';
 
 interface HomeworkTabProps {
   t: (key: TranslationKey) => string;

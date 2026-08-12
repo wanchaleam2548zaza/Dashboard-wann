@@ -1,6 +1,6 @@
 import { Calendar, User as UserIcon, MapPin } from 'lucide-react';
 import type { TranslationKey } from '../../translations';
-import type { SubjectData } from '../../pages/Dashboard';
+import type { SubjectData } from '../../types';
 
 interface ScheduleTabProps {
   t: (key: TranslationKey) => string;

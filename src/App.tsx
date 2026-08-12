@@ -6,6 +6,7 @@ import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { Loader2 } from 'lucide-react';
+import { GlobalAnnouncement } from './components/ui/GlobalAnnouncement';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -30,12 +31,27 @@ export default function App() {
   }
 
   if (isAdmin) {
-    return <AdminDashboard onLogout={() => setIsAdmin(false)} />;
+    return (
+      <>
+        <GlobalAnnouncement />
+        <AdminDashboard onLogout={() => setIsAdmin(false)} />
+      </>
+    );
   }
 
   if (!user) {
-    return <Login onAdminLogin={() => setIsAdmin(true)} />;
+    return (
+      <>
+        <GlobalAnnouncement />
+        <Login onAdminLogin={() => setIsAdmin(true)} />
+      </>
+    );
   }
 
-  return <Dashboard user={user} />;
+  return (
+    <>
+      <GlobalAnnouncement />
+      <Dashboard user={user} />
+    </>
+  );
 }
