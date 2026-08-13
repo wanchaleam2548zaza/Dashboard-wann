@@ -1,19 +1,29 @@
-import { useState, useEffect, useRef } from 'react';
-import { auth, db } from '../firebase';
-import { signOut, reauthenticateWithCredential, EmailAuthProvider, updatePassword } from 'firebase/auth';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { secondaryAuth, auth, db } from '../firebase';
+import { signOut, reauthenticateWithCredential, EmailAuthProvider, updatePassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, updateDoc, setDoc, collection, onSnapshot, addDoc, query, where, deleteDoc, increment } from 'firebase/firestore';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft, Trash2, Edit2, Globe, CheckCheck, MessageSquare, Send, CornerUpLeft, Menu, Share2, ChevronDown, Sun, Cloud, CloudRain, CloudLightning, Map } from 'lucide-react';
+import { Bell, BookOpen, CheckSquare, Clock, MapPin, User as UserIcon, Home, Calendar, UserCircle, PlusCircle, BarChart2, Search, X, CheckCircle2, ArrowLeft, Trash2, Edit2, Globe, CheckCheck, MessageSquare, Send, CornerUpLeft, Menu, Share2, ChevronDown, Sun, Cloud, CloudRain, CloudLightning, Map, Lock, LogOut } from 'lucide-react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { useLanguage } from '../contexts/LanguageContext';
 import type { TranslationKey } from '../translations';
 import { ScheduleTab } from '../components/dashboard/ScheduleTab';
 import { SettingsTab } from '../components/dashboard/SettingsTab';
 import { HomeworkTab } from '../components/dashboard/HomeworkTab';
-import type { SubjectData, UserData, HomeworkData, CalendarEventData, HomeworkRequestData, MessageData } from '../types';
-import { CompletedByAvatars } from '../components/ui/CompletedByAvatars';
+import { ExamsTab } from '../components/dashboard/ExamsTab';
+import { UserManagementTab } from '../components/admin/UserManagementTab';
+import type { SubjectData, UserData, HomeworkData, CalendarEventData, HomeworkRequestData, MessageData, ExamData } from '../types';
 
+const getFestivalsForYear = (year: number, lang: 'th' | 'en'): CalendarEventData[] => {
+  return [
+    { id: 'f-ny', userId: 'system', date: `${year}-01-01`, title: lang === 'th' ? 'วันขึ้นปีใหม่' : 'New Year', color: '#ffcc00', createdAt: '', readOnly: true },
+    { id: 'f-vd', userId: 'system', date: `${year}-02-14`, title: lang === 'th' ? 'วันวาเลนไทน์' : 'Valentine\'s', color: '#ff2d55', createdAt: '', readOnly: true },
+    { id: 'f-sk', userId: 'system', date: `${year}-04-13`, title: lang === 'th' ? 'สงกรานต์' : 'Songkran', color: '#5ac8fa', createdAt: '', readOnly: true },
+    { id: 'f-hw', userId: 'system', date: `${year}-10-31`, title: lang === 'th' ? 'ฮาโลวีน' : 'Halloween', color: '#ff9500', createdAt: '', readOnly: true },
+    { id: 'f-xm', userId: 'system', date: `${year}-12-25`, title: lang === 'th' ? 'คริสต์มาส' : 'Christmas', color: '#4cd964', createdAt: '', readOnly: true },
+  ];
+};
 interface DashboardProps {
   user: FirebaseUser;
 }
@@ -64,28 +74,54 @@ export function Dashboard({ user }: DashboardProps) {
   const [loading, setLoading] = useState(false);
   const [subjectList, setSubjectList] = useState<SubjectData[]>([]);
   const [homeworkList, setHomeworkList] = useState<HomeworkData[]>([]);
-  const [activeTab, setActiveTab] = useState<'home' | 'schedule' | 'analytics' | 'friends' | 'profile' | 'subject-details' | 'chat' | 'overview'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'schedule' | 'analytics' | 'friends' | 'profile' | 'subject-details' | 'chat' | 'overview' | 'exams' | 'notifications' | 'users'>('home');
+  const [examList, setExamList] = useState<ExamData[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [weatherData, setWeatherData] = useState<{ temp: number, code: number } | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [locationName, setLocationName] = useState<string>('Bangkok');
   const [hasGpsError, setHasGpsError] = useState(false);
-  
+
   // Calendar Events State
   const [calendarEvents, setCalendarEvents] = useState<CalendarEventData[]>([]);
+
+  const allEvents = useMemo(() => {
+    const yyyy = new Date().getFullYear();
+    const festivals = getFestivalsForYear(yyyy, t('nav_home') === 'หน้าหลัก' ? 'th' : 'en');
+
+    const exams: CalendarEventData[] = examList.map(e => ({
+      id: `exam-${e.id}`, userId: 'system', date: e.examDate || '', title: (t('nav_home') === 'หน้าหลัก' ? 'สอบ: ' : 'Exam: ') + e.title, color: '#ff3b30', createdAt: e.createdAt, readOnly: true
+    })).filter(e => e.date);
+
+    return [...festivals, ...exams, ...calendarEvents];
+  }, [calendarEvents, examList, t]);
+
+  const upcomingNotifications = useMemo(() => {
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    const maxDate = new Date();
+    maxDate.setDate(maxDate.getDate() + 3);
+    const maxDateStr = `${maxDate.getFullYear()}-${String(maxDate.getMonth() + 1).padStart(2, '0')}-${String(maxDate.getDate()).padStart(2, '0')}`;
+
+    return allEvents
+      .filter(ev => ev.date >= todayStr && ev.date <= maxDateStr)
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [allEvents]);
+
   const [showEventModal, setShowEventModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
   const [newEventTitle, setNewEventTitle] = useState('');
   const [newEventColor, setNewEventColor] = useState('#ff3b30'); // default red
-  
+
   const currentDayIndex = new Date().getDay(); // 0 is Sunday
-  const defaultDay = currentDayIndex === 0 ? 'Sunday' : 
-                     currentDayIndex === 1 ? 'Monday' :
-                     currentDayIndex === 2 ? 'Tuesday' :
-                     currentDayIndex === 3 ? 'Wednesday' :
-                     currentDayIndex === 4 ? 'Thursday' :
-                     currentDayIndex === 5 ? 'Friday' : 'Saturday';
-                     
+  const defaultDay = currentDayIndex === 0 ? 'Sunday' :
+    currentDayIndex === 1 ? 'Monday' :
+      currentDayIndex === 2 ? 'Tuesday' :
+        currentDayIndex === 3 ? 'Wednesday' :
+          currentDayIndex === 4 ? 'Thursday' :
+            currentDayIndex === 5 ? 'Friday' : 'Saturday';
+
   const [selectedDay, setSelectedDay] = useState<string>(defaultDay);
   const [selectedSubject, setSelectedSubject] = useState<SubjectData | null>(null);
   const [subjectHwTab, setSubjectHwTab] = useState<'new' | 'urgent' | 'overdue' | 'completed'>('new');
@@ -103,7 +139,7 @@ export function Dashboard({ user }: DashboardProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Homework To-Do State
-  const [allCompletedHomework, setAllCompletedHomework] = useState<{userId: string, homeworkId: string, completedAt?: string}[]>([]);
+  const [allCompletedHomework, setAllCompletedHomework] = useState<{ userId: string, homeworkId: string, completedAt?: string }[]>([]);
   const [completedHomeworkIds, setCompletedHomeworkIds] = useState<Set<string>>(new Set());
   const [selectedHomework, setSelectedHomework] = useState<HomeworkData | null>(null);
 
@@ -135,6 +171,31 @@ export function Dashboard({ user }: DashboardProps) {
   };
 
   const [canAddHomework, setCanAddHomework] = useState(false);
+  const [isSecA, setIsSecA] = useState(false);
+  const [isPresident, setIsPresident] = useState(false);
+
+  const [createUsername, setCreateUsername] = useState('');
+  const [createPassword, setCreatePassword] = useState('');
+  const [createUserLoading, setCreateUserLoading] = useState(false);
+  const [createUserMessage, setCreateUserMessage] = useState<{ type: 'error' | 'success', text: string } | null>(null);
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreateUserLoading(true);
+    setCreateUserMessage(null);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(secondaryAuth, `${createUsername}@dashboard.com`, createPassword);
+      await setDoc(doc(db, 'users', userCredential.user.uid), { username: createUsername, isOnline: false, createdAt: new Date().toISOString() });
+      await signOut(secondaryAuth);
+      setCreateUserMessage({ type: 'success', text: 'User created successfully! They can now log in.' });
+      setCreateUsername('');
+      setCreatePassword('');
+    } catch (err: any) {
+      setCreateUserMessage({ type: 'error', text: err.message || 'Error creating user' });
+    } finally {
+      setCreateUserLoading(false);
+    }
+  };
 
   // Chat State
   const activeTabRef = useRef(activeTab);
@@ -152,7 +213,7 @@ export function Dashboard({ user }: DashboardProps) {
   const [replyingTo, setReplyingTo] = useState<MessageData | null>(null);
   const [isChatMenuOpen, setIsChatMenuOpen] = useState(false);
   const [roomTheme, setRoomTheme] = useState<string | null>(null);
-  
+
   const [chatNotifsEnabled, setChatNotifsEnabled] = useState(() => {
     return localStorage.getItem('chat_notifications_enabled') !== 'false';
   });
@@ -203,14 +264,14 @@ export function Dashboard({ user }: DashboardProps) {
             code: data.current_weather.weathercode
           });
         }
-        
+
         try {
           const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
           const geoData = await geoRes.json();
           if (geoData && (geoData.locality || geoData.city)) {
             setLocationName(geoData.locality || geoData.city);
           }
-        } catch (e) {}
+        } catch (e) { }
       } catch (e) {
         console.error('Weather fetch error', e);
       } finally {
@@ -230,7 +291,7 @@ export function Dashboard({ user }: DashboardProps) {
         (error) => {
           console.error("GPS Error:", error);
           setHasGpsError(true);
-          fetchWeatherData(13.75, 100.50); 
+          fetchWeatherData(13.75, 100.50);
         },
         { enableHighAccuracy: true, timeout: 5000 }
       );
@@ -252,11 +313,33 @@ export function Dashboard({ user }: DashboardProps) {
   useEffect(() => {
     const q = query(collection(db, 'calendarEvents'), where('userId', '==', user.uid));
     const unsub = onSnapshot(q, (snapshot) => {
-      const evts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CalendarEventData));
-      setCalendarEvents(evts);
+      const events: CalendarEventData[] = [];
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+      snapshot.docs.forEach(docSnap => {
+        const data = docSnap.data() as CalendarEventData;
+        const id = docSnap.id;
+
+        if (data.date && data.date < todayStr && !data.readOnly) {
+          deleteDoc(doc(db, 'calendarEvents', id)).catch(console.error);
+        } else {
+          events.push({ ...data, id });
+        }
+      });
+      setCalendarEvents(events);
     });
     return () => unsub();
   }, [user.uid]);
+
+  useEffect(() => {
+    const q = query(collection(db, 'exams'));
+    const unsub = onSnapshot(q, (snapshot) => {
+      const exms = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExamData));
+      setExamList(exms);
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     isFirstLoad.current = true;
@@ -264,14 +347,14 @@ export function Dashboard({ user }: DashboardProps) {
       const q = query(collection(db, 'messages'), where('chatId', '==', activeChatId));
       const unsub = onSnapshot(q, (snap) => {
         const msgs: MessageData[] = [];
-        
+
         if (!isFirstLoad.current) {
           snap.docChanges().forEach(change => {
             if (change.type === 'added') {
               const data = change.doc.data() as MessageData;
               if (data.senderId !== user.uid && Notification.permission === 'granted' && chatNotifsRef.current) {
                 if (document.hidden || activeTabRef.current !== 'chat') {
-                  const notification = new Notification(`New message from ${data.senderName}`, { 
+                  const notification = new Notification(`New message from ${data.senderName}`, {
                     body: data.text,
                     icon: '/favicon.ico' // fallback icon
                   });
@@ -284,7 +367,7 @@ export function Dashboard({ user }: DashboardProps) {
             }
           });
         }
-        
+
         snap.forEach(d => msgs.push({ id: d.id, ...d.data() } as MessageData));
         msgs.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
         setChatMessages(msgs);
@@ -323,7 +406,7 @@ export function Dashboard({ user }: DashboardProps) {
           };
         }
         await addDoc(collection(db, 'messages'), payload);
-        
+
         if (activeChatId !== 'global') {
           const recipientId = activeChatId.replace(user.uid, '').replace('_', '');
           if (recipientId) {
@@ -332,7 +415,7 @@ export function Dashboard({ user }: DashboardProps) {
               lastMessage: msgText,
               updatedAt: new Date().toISOString()
             }, { merge: true }).catch(console.error);
-            
+
             setDoc(doc(db, `users/${user.uid}/chats`, activeChatId), {
               lastMessage: msgText,
               updatedAt: new Date().toISOString()
@@ -403,8 +486,8 @@ export function Dashboard({ user }: DashboardProps) {
   const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [pwLoading, setPwLoading] = useState(false);
   const [pwMessage, setPwMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  
-  
+
+
   // Load avatar + displayName from Firestore in real-time
   useEffect(() => {
     const userDocRef = doc(db, 'users', user.uid);
@@ -413,20 +496,22 @@ export function Dashboard({ user }: DashboardProps) {
         const data = snap.data();
         if (data.avatarUrl) setAvatarUrl(data.avatarUrl);
         else setAvatarUrl(null);
-        
+
         if (data.avatarPublicId) setAvatarPublicId(data.avatarPublicId);
         else setAvatarPublicId(null);
-        
+
         const dn = data.displayName || data.username || user.email?.replace('@dashboard.com', '') || '';
         // Only update input if we aren't currently editing it
         setDisplayName(dn);
         setDisplayNameInput(prev => editingDisplayName ? prev : dn);
         setCanAddHomework(!!data.canAddHomework);
+        setIsSecA(!!data.isSecA);
+        setIsPresident(!!data.isPresident);
       }
-      
+
     }, (err) => {
       console.error("Error fetching my profile:", err);
-      
+
     });
 
     // Subscribe to all users for Friends tab
@@ -489,7 +574,7 @@ export function Dashboard({ user }: DashboardProps) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ public_id: avatarPublicId, upload_preset: uploadPreset }),
-        }).catch(() => {});
+        }).catch(() => { });
       }
       // Save new URL + publicId to Firestore
       const userDocRef = doc(db, 'users', user.uid);
@@ -600,7 +685,7 @@ export function Dashboard({ user }: DashboardProps) {
         snapshot.forEach((doc) => {
           reqs.push({ id: doc.id, ...doc.data() } as HomeworkRequestData);
         });
-        setHomeworkRequests(reqs.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        setHomeworkRequests(reqs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       },
       (error) => console.error("Firestore requests error:", error)
     );
@@ -608,7 +693,7 @@ export function Dashboard({ user }: DashboardProps) {
     const unsubscribeCompletions = onSnapshot(
       collection(db, 'completedHomework'),
       (snapshot) => {
-        const completed: {userId: string, homeworkId: string, completedAt?: string}[] = [];
+        const completed: { userId: string, homeworkId: string, completedAt?: string }[] = [];
         const completedIds = new Set<string>();
         snapshot.forEach((doc) => {
           const data = doc.data();
@@ -625,6 +710,18 @@ export function Dashboard({ user }: DashboardProps) {
       (error) => console.error("Firestore completions error:", error)
     );
 
+    const unsubscribeExams = onSnapshot(
+      collection(db, 'exams'),
+      (snapshot) => {
+        const exams: ExamData[] = [];
+        snapshot.forEach((doc) => {
+          exams.push({ id: doc.id, ...doc.data() } as ExamData);
+        });
+        setExamList(exams);
+      },
+      (error) => console.error("Firestore exams error:", error)
+    );
+
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
@@ -636,6 +733,7 @@ export function Dashboard({ user }: DashboardProps) {
       unsubscribeHomework();
       unsubscribeRequests();
       unsubscribeCompletions();
+      unsubscribeExams();
     };
   }, [user.uid]);
 
@@ -645,7 +743,7 @@ export function Dashboard({ user }: DashboardProps) {
       const userDocRef = doc(db, 'users', user.uid);
       // We don't await updateDoc because if Firestore is offline or disabled, it will hang indefinitely
       updateDoc(userDocRef, { isOnline: false }).catch(console.error);
-      
+
       await signOut(auth);
     } catch (err) {
       console.error(err);
@@ -692,7 +790,7 @@ export function Dashboard({ user }: DashboardProps) {
   const toggleHomeworkCompletion = async (homeworkId: string) => {
     const docId = `${user.uid}_${homeworkId}`;
     const docRef = doc(db, 'completedHomework', docId);
-    
+
     try {
       if (completedHomeworkIds.has(homeworkId)) {
         await deleteDoc(docRef);
@@ -709,7 +807,7 @@ export function Dashboard({ user }: DashboardProps) {
   };
 
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Unknown'];
-  
+
   const groupedSubjects = subjectList.reduce((acc, subject) => {
     const day = subject.day || 'Unknown';
     if (!acc[day]) acc[day] = [];
@@ -751,8 +849,8 @@ export function Dashboard({ user }: DashboardProps) {
 
   return (
     <div className="app-container" data-theme={activeEffectiveTheme} style={{ paddingBottom: '70px', background: 'var(--bg-primary)', transition: 'background-color 0.3s ease' }}>
-      <header style={{ 
-        padding: '1.5rem', 
+      <header style={{
+        padding: '1.5rem',
         borderBottom: '1px solid var(--border-color)',
         display: 'flex',
         justifyContent: 'space-between',
@@ -772,14 +870,37 @@ export function Dashboard({ user }: DashboardProps) {
           <button onClick={() => setShowSearch(true)} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex' }} title="Search">
             <Search size={22} />
           </button>
-          <button style={{ 
-            background: 'none', 
-            border: 'none', 
-            color: 'var(--text-primary)',
-            cursor: 'pointer',
-            display: 'flex'
-          }}>
+          <button
+            onClick={() => setActiveTab('notifications')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: activeTab === 'notifications' ? 'var(--accent-color)' : 'var(--text-primary)',
+              cursor: 'pointer',
+              display: 'flex',
+              position: 'relative'
+            }}>
             <Bell size={22} />
+            {upcomingNotifications.length > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-4px',
+                right: '-4px',
+                background: '#ff3b30',
+                color: '#fff',
+                fontSize: '0.65rem',
+                fontWeight: 700,
+                width: '16px',
+                height: '16px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '2px solid var(--bg-primary)'
+              }}>
+                {upcomingNotifications.length}
+              </span>
+            )}
           </button>
         </div>
       </header>
@@ -791,159 +912,158 @@ export function Dashboard({ user }: DashboardProps) {
               <h2 style={{ fontSize: '1.5rem' }}>{t('home_welcome_back')}</h2>
               <p style={{ color: 'var(--text-secondary)' }}>{user.email?.replace('@dashboard.com', '')}</p>
             </div>
-            
+
             {/* Grid Layout Container */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-              
-              {/* Clock & Weather Widget (Left) */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, paddingLeft: '0.5rem' }}>
-                  <Clock size={18} /> {t('nav_home') === 'หน้าหลัก' ? 'เวลาและสภาพอากาศ' : 'Time & Weather'}
-                </h3>
-                <div style={{ 
-                  background: 'var(--bg-secondary)', 
-                  borderRadius: '24px', 
-                  padding: '1.25rem', 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  border: '1px solid var(--border-color)',
-                  boxShadow: '0 10px 30px -10px rgba(0,0,0,0.1)',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  flex: 1
-                }}>
-                  {/* Decorative glows */}
-                  <div style={{ position: 'absolute', top: '-15px', left: '-15px', width: '70px', height: '70px', background: 'var(--accent-color)', opacity: 0.15, borderRadius: '50%', filter: 'blur(30px)' }} />
-                  <div style={{ position: 'absolute', bottom: '-15px', right: '-15px', width: '90px', height: '90px', background: '#3b82f6', opacity: 0.15, borderRadius: '50%', filter: 'blur(30px)' }} />
-                  
-                  <div style={{ fontSize: '2.5rem', fontWeight: 800, letterSpacing: '-1.5px', color: 'var(--text-primary)', lineHeight: 1.1, marginBottom: '0.15rem', zIndex: 1 }}>
-                    {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                  </div>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '1rem', zIndex: 1 }}>
-                    {currentTime.toLocaleDateString(t('nav_home') === 'หน้าหลัก' ? 'th-TH' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                  </div>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', zIndex: 1, width: '100%' }}>
-                    {weatherLoading ? (
-                      <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', textAlign: 'center', width: '100%' }}>Loading...</div>
-                    ) : weatherData ? (
-                      <>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', background: 'var(--bg-primary)', padding: '0.35rem 0.5rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                          <MapPin size={12} color="var(--text-secondary)" /> 
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{locationName}</span>
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: 'var(--bg-primary)', padding: '0.5rem', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-                            {getWeatherDetails(weatherData.code).icon}
-                            <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>
-                              {weatherData.temp}°C
-                            </div>
-                          </div>
-                          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', padding: '0.5rem', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-                            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', textAlign: 'center' }}>
-                              {t(getWeatherDetails(weatherData.code).descKey)}
-                            </div>
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', textAlign: 'center', width: '100%' }}>Unavailable</div>
-                    )}
-                  </div>
 
-                  {hasGpsError && (
-                    <div style={{ fontSize: '0.75rem', color: '#ff3b30', marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', zIndex: 1 }}>
-                      <Map size={14} /> {t('home_gps_error' as TranslationKey)}
-                    </div>
+              {/* Clock & Weather Widget (Left) */}
+              <div style={{
+                background: 'var(--bg-secondary)',
+                borderRadius: '24px',
+                padding: '1.25rem',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px solid var(--border-color)',
+                boxShadow: '0 10px 30px -10px rgba(0,0,0,0.1)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                {/* Decorative glows */}
+                <div style={{ position: 'absolute', top: '-15px', left: '-15px', width: '70px', height: '70px', background: 'var(--accent-color)', opacity: 0.15, borderRadius: '50%', filter: 'blur(30px)' }} />
+                <div style={{ position: 'absolute', bottom: '-15px', right: '-15px', width: '90px', height: '90px', background: '#3b82f6', opacity: 0.15, borderRadius: '50%', filter: 'blur(30px)' }} />
+
+                <div style={{ fontSize: '2.5rem', fontWeight: 800, letterSpacing: '-1.5px', color: 'var(--text-primary)', lineHeight: 1.1, marginBottom: '0.15rem', zIndex: 1 }}>
+                  {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '1rem', zIndex: 1 }}>
+                  {currentTime.toLocaleDateString(t('nav_home') === 'หน้าหลัก' ? 'th-TH' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', zIndex: 1, width: '100%' }}>
+                  {weatherLoading ? (
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', textAlign: 'center', width: '100%' }}>Loading...</div>
+                  ) : weatherData ? (
+                    <>
+                      {/* Location spanning both */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', background: 'var(--bg-primary)', padding: '0.35rem 0.5rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                        <MapPin size={12} color="var(--text-secondary)" />
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{locationName}</span>
+                      </div>
+
+                      {/* Two Cards Row */}
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        {/* Temperature Card */}
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: 'var(--bg-primary)', padding: '0.5rem', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
+                          {getWeatherDetails(weatherData.code).icon}
+                          <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>
+                            {weatherData.temp}°C
+                          </div>
+                        </div>
+                        {/* Condition Card */}
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', padding: '0.5rem', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
+                          <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', textAlign: 'center' }}>
+                            {t(getWeatherDetails(weatherData.code).descKey)}
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', textAlign: 'center', width: '100%' }}>Unavailable</div>
                   )}
                 </div>
+
+                {hasGpsError && (
+                  <div style={{ fontSize: '0.75rem', color: '#ff3b30', marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', zIndex: 1 }}>
+                    <Map size={14} /> {t('home_gps_error' as TranslationKey)}
+                  </div>
+                )}
               </div>
 
               {/* Calendar Widget (Right) */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, paddingLeft: '0.5rem' }}>
-                  <Calendar size={18} /> {t('nav_home') === 'หน้าหลัก' ? 'ปฏิทิน' : 'Calendar'}
-                </h3>
-                <div style={{ 
-                  background: 'var(--bg-secondary)', 
-                  borderRadius: '24px', 
-                  padding: '1rem', 
-                  border: '1px solid var(--border-color)',
-                  boxShadow: '0 10px 30px -10px rgba(0,0,0,0.1)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  flex: 1
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', padding: '0 0.5rem' }}>
-                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                      {currentTime.toLocaleDateString(t('nav_home') === 'หน้าหลัก' ? 'th-TH' : 'en-US', { month: 'long', year: 'numeric' })}
-                    </h3>
-                  </div>
-                  
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.15rem', marginBottom: '0.5rem' }}>
-                    {(t('nav_home') === 'หน้าหลัก' ? DAYS_TH : DAYS_EN).map((day, idx) => (
-                      <div key={idx} style={{ textAlign: 'center', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                        {day}
+              <div style={{
+                background: 'var(--bg-secondary)',
+                borderRadius: '24px',
+                padding: '1rem',
+                border: '1px solid var(--border-color)',
+                boxShadow: '0 10px 30px -10px rgba(0,0,0,0.1)',
+                display: 'flex',
+                flexDirection: 'column'
+              }}>
+                {/* Calendar Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', padding: '0 0.5rem' }}>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {currentTime.toLocaleDateString(t('nav_home') === 'หน้าหลัก' ? 'th-TH' : 'en-US', { month: 'long', year: 'numeric' })}
+                  </h3>
+                </div>
+
+                {/* Days of week */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.15rem', marginBottom: '0.5rem' }}>
+                  {(t('nav_home') === 'หน้าหลัก' ? DAYS_TH : DAYS_EN).map((day, idx) => (
+                    <div key={idx} style={{ textAlign: 'center', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                      {day}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Calendar Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.15rem', flex: 1, alignContent: 'start' }}>
+                  {/* Empty slots for first day */}
+                  {Array.from({ length: getFirstDayOfMonth(currentTime.getFullYear(), currentTime.getMonth()) }).map((_, i) => (
+                    <div key={`empty-${i}`} style={{ aspectRatio: '1' }} />
+                  ))}
+
+                  {/* Days */}
+                  {Array.from({ length: getDaysInMonth(currentTime.getFullYear(), currentTime.getMonth()) }).map((_, i) => {
+                    const day = i + 1;
+                    const isToday = day === currentTime.getDate();
+
+                    const yyyy = currentTime.getFullYear();
+                    const mm = String(currentTime.getMonth() + 1).padStart(2, '0');
+                    const dd = String(day).padStart(2, '0');
+                    const dateStr = `${yyyy}-${mm}-${dd}`;
+                    const dayEvents = allEvents.filter(e => e.date === dateStr);
+
+                    return (
+                      <div
+                        key={day}
+                        onClick={() => {
+                          setSelectedDate(dateStr);
+                          setShowEventModal(true);
+                        }}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          aspectRatio: '1',
+                          borderRadius: '12px',
+                          fontWeight: isToday ? 700 : 500,
+                          color: isToday ? '#fff' : 'var(--text-primary)',
+                          background: isToday ? 'var(--accent-color)' : (dayEvents.length > 0 ? 'var(--bg-primary)' : 'transparent'),
+                          boxShadow: isToday ? '0 4px 10px rgba(0,0,0,0.1)' : 'none',
+                          cursor: 'pointer',
+                          transition: 'background-color 0.2s',
+                        }}
+                        onMouseEnter={(e) => { if (!isToday) e.currentTarget.style.backgroundColor = 'var(--bg-primary)'; }}
+                        onMouseLeave={(e) => { if (!isToday) e.currentTarget.style.backgroundColor = dayEvents.length > 0 ? 'var(--bg-primary)' : 'transparent'; }}
+                      >
+                        <span style={{ fontSize: '0.8rem', lineHeight: 1 }}>{day}</span>
+                        {dayEvents.length > 0 && (
+                          <div style={{ display: 'flex', gap: '2px', marginTop: '2px', flexWrap: 'wrap', justifyContent: 'center', maxWidth: '80%' }}>
+                            {dayEvents.slice(0, 3).map((ev, idx) => (
+                              <div key={idx} style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: ev.color }} />
+                            ))}
+                            {dayEvents.length > 3 && <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'var(--text-secondary)' }} />}
+                          </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                  
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.15rem', flex: 1, alignContent: 'start' }}>
-                    {Array.from({ length: getFirstDayOfMonth(currentTime.getFullYear(), currentTime.getMonth()) }).map((_, i) => (
-                      <div key={`empty-${i}`} style={{ aspectRatio: '1' }} />
-                    ))}
-                    
-                    {Array.from({ length: getDaysInMonth(currentTime.getFullYear(), currentTime.getMonth()) }).map((_, i) => {
-                      const day = i + 1;
-                      const isToday = day === currentTime.getDate();
-                      
-                      const yyyy = currentTime.getFullYear();
-                      const mm = String(currentTime.getMonth() + 1).padStart(2, '0');
-                      const dd = String(day).padStart(2, '0');
-                      const dateStr = `${yyyy}-${mm}-${dd}`;
-                      const dayEvents = calendarEvents.filter(e => e.date === dateStr);
-                      
-                      return (
-                        <div 
-                          key={day}
-                          onClick={() => {
-                            setSelectedDate(dateStr);
-                            setShowEventModal(true);
-                          }}
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            aspectRatio: '1',
-                            borderRadius: '12px',
-                            fontWeight: isToday ? 700 : 500,
-                            color: isToday ? '#fff' : 'var(--text-primary)',
-                            background: isToday ? 'var(--accent-color)' : (dayEvents.length > 0 ? 'var(--bg-primary)' : 'transparent'),
-                            boxShadow: isToday ? '0 4px 10px rgba(0,0,0,0.1)' : 'none',
-                            cursor: 'pointer',
-                            transition: 'background-color 0.2s',
-                          }}
-                          onMouseEnter={(e) => { if (!isToday) e.currentTarget.style.backgroundColor = 'var(--bg-primary)'; }}
-                          onMouseLeave={(e) => { if (!isToday) e.currentTarget.style.backgroundColor = dayEvents.length > 0 ? 'var(--bg-primary)' : 'transparent'; }}
-                        >
-                          <span style={{ fontSize: '0.8rem', lineHeight: 1 }}>{day}</span>
-                          {dayEvents.length > 0 && (
-                            <div style={{ display: 'flex', gap: '2px', marginTop: '2px', flexWrap: 'wrap', justifyContent: 'center', maxWidth: '80%' }}>
-                              {dayEvents.slice(0, 3).map((ev, idx) => (
-                                <div key={idx} style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: ev.color }} />
-                              ))}
-                              {dayEvents.length > 3 && <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'var(--text-secondary)' }} />}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
+
             </div>
 
             {/* Event Modal */}
@@ -975,12 +1095,12 @@ export function Dashboard({ user }: DashboardProps) {
                       <X size={24} />
                     </button>
                   </div>
-                  
+
                   {/* Existing Events for the day */}
-                  {calendarEvents.filter(e => e.date === selectedDate).length > 0 && (
+                  {allEvents.filter(e => e.date === selectedDate).length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                       <h4 style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Events</h4>
-                      {calendarEvents.filter(e => e.date === selectedDate).map(ev => (
+                      {allEvents.filter(e => e.date === selectedDate).map(ev => (
                         <div key={ev.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-secondary)', padding: '0.75rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: ev.color }} />
@@ -997,13 +1117,13 @@ export function Dashboard({ user }: DashboardProps) {
                   {/* Add New Event Form */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <h4 style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Add New Mark</h4>
-                    <Input 
+                    <Input
                       label="Event Title"
-                      placeholder="Title / ว่าวันอะไร..." 
-                      value={newEventTitle} 
+                      placeholder="Title / ว่าวันอะไร..."
+                      value={newEventTitle}
                       onChange={e => setNewEventTitle(e.target.value)}
                     />
-                    
+
                     <div>
                       <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Color</div>
                       <div style={{ display: 'flex', gap: '1rem' }}>
@@ -1032,7 +1152,7 @@ export function Dashboard({ user }: DashboardProps) {
             )}
           </div>
         )}
-        
+
         {activeTab === 'overview' && (
           <HomeworkTab
             t={t}
@@ -1099,7 +1219,7 @@ export function Dashboard({ user }: DashboardProps) {
               <h3 style={{ fontSize: '1.125rem', margin: '0.5rem 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
                 <BookOpen size={20} color="var(--text-primary)" /> {t('workload_homework_by_subject')}
               </h3>
-              
+
               <div style={{ background: 'var(--bg-secondary)', borderRadius: '12px', padding: '1.25rem', border: '1px solid var(--border-color)' }}>
                 {subjectHwCounts.every(s => s.count === 0) ? (
                   <div style={{ padding: '2rem 0', textAlign: 'center', color: 'var(--text-secondary)' }}>
@@ -1117,10 +1237,10 @@ export function Dashboard({ user }: DashboardProps) {
                             <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{subject.count} {t('workload_assignments')}</span>
                           </div>
                           <div style={{ width: '100%', height: '8px', background: 'var(--bg-primary)', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
-                            <div style={{ 
-                              width: `${percentage}%`, 
-                              height: '100%', 
-                              background: 'var(--accent-color)', 
+                            <div style={{
+                              width: `${percentage}%`,
+                              height: '100%',
+                              background: 'var(--accent-color)',
                               borderRadius: '12px',
                               transition: 'width 0.5s ease-out'
                             }} />
@@ -1163,7 +1283,7 @@ export function Dashboard({ user }: DashboardProps) {
                       </div>
                     ))}
                     {userList.filter(u => u.isOnline && u.id !== user.uid).length === 0 && (
-                       <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', padding: '1rem 0' }}>No friends active right now.</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', padding: '1rem 0' }}>No friends active right now.</div>
                     )}
                   </div>
                 </div>
@@ -1171,14 +1291,14 @@ export function Dashboard({ user }: DashboardProps) {
                 {/* Combined Chat List (Global + Friends) */}
                 <div style={{ flex: 1, padding: '0.5rem 0' }}>
                   <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0.5rem', fontWeight: 600 }}>{t('chat_messages' as TranslationKey)}</h3>
-                  
+
                   <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--bg-secondary)', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
-                    
+
                     {/* Global Room */}
-                    <div 
+                    <div
                       onClick={() => setActiveChatId('global')}
-                      style={{ 
-                        display: 'flex', alignItems: 'center', gap: '1rem', 
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '1rem',
                         padding: '1rem', cursor: 'pointer', borderBottom: '1px solid var(--border-color)',
                         transition: 'background-color 0.2s'
                       }}
@@ -1201,11 +1321,11 @@ export function Dashboard({ user }: DashboardProps) {
                       const unread = chatMetadata[chatId]?.unreadCount || 0;
                       const lastMsg = chatMetadata[chatId]?.lastMessage;
                       return (
-                        <div 
-                          key={u.id} 
-                          onClick={() => startPrivateChat(u.id)} 
-                          style={{ 
-                            display: 'flex', alignItems: 'center', gap: '1rem', 
+                        <div
+                          key={u.id}
+                          onClick={() => startPrivateChat(u.id)}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '1rem',
                             padding: '1rem', cursor: 'pointer',
                             borderBottom: idx === arr.length - 1 ? 'none' : '1px solid var(--border-color)',
                             transition: 'background-color 0.2s'
@@ -1256,14 +1376,14 @@ export function Dashboard({ user }: DashboardProps) {
                       )}
                     </div>
                   </div>
-                  
-                  <button 
+
+                  <button
                     onClick={() => setIsChatMenuOpen(!isChatMenuOpen)}
                     style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', padding: '0.5rem', display: 'flex', alignItems: 'center' }}
                   >
                     <Menu size={20} />
                   </button>
-                  
+
                   {isChatMenuOpen && (
                     <>
                       <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9 }} onClick={() => setIsChatMenuOpen(false)} />
@@ -1271,7 +1391,7 @@ export function Dashboard({ user }: DashboardProps) {
                         <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>{t('profile_theme_chat')}</div>
                         <select
                           value={effectiveChatTheme}
-                          onChange={async (e) => { 
+                          onChange={async (e) => {
                             const newTheme = e.target.value;
                             if (activeChatId) {
                               try {
@@ -1280,8 +1400,8 @@ export function Dashboard({ user }: DashboardProps) {
                                 console.error('Failed to sync theme', err);
                               }
                             }
-                            setChatTheme(newTheme as any); 
-                            setIsChatMenuOpen(false); 
+                            setChatTheme(newTheme as any);
+                            setIsChatMenuOpen(false);
                           }}
                           className="ios-select"
                         >
@@ -1295,10 +1415,10 @@ export function Dashboard({ user }: DashboardProps) {
                           <span style={{ fontSize: '0.85rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <Bell size={14} /> Notifications
                           </span>
-                          <input 
-                            type="checkbox" 
-                            checked={chatNotifsEnabled} 
-                            onChange={(e) => setChatNotifsEnabled(e.target.checked)} 
+                          <input
+                            type="checkbox"
+                            checked={chatNotifsEnabled}
+                            onChange={(e) => setChatNotifsEnabled(e.target.checked)}
                             style={{ cursor: 'pointer' }}
                           />
                         </div>
@@ -1306,7 +1426,7 @@ export function Dashboard({ user }: DashboardProps) {
                     </>
                   )}
                 </div>
-                
+
                 <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.2rem', padding: '1rem 0', scrollbarWidth: 'none' }}>
                   {chatMessages.length === 0 ? (
                     <div style={{ margin: 'auto', color: 'var(--text-secondary)' }}>{t('chat_no_messages' as TranslationKey)}</div>
@@ -1320,21 +1440,21 @@ export function Dashboard({ user }: DashboardProps) {
                       const isLastInGroup = !nextMsg || nextMsg.senderId !== msg.senderId;
 
                       return (
-                        <div key={msg.id} style={{ 
-                          alignSelf: isMe ? 'flex-end' : 'flex-start', 
-                          maxWidth: '75%', 
-                          display: 'flex', 
+                        <div key={msg.id} style={{
+                          alignSelf: isMe ? 'flex-end' : 'flex-start',
+                          maxWidth: '75%',
+                          display: 'flex',
                           flexDirection: 'column',
                           marginTop: isFirstInGroup && idx > 0 ? '0.5rem' : '0'
                         }}>
                           {!isMe && isFirstInGroup && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.2rem', marginLeft: '0.75rem' }}>{msg.senderName}</div>}
-                          
-                          <div 
+
+                          <div
                             onClick={() => setActiveMessageId(isActive ? null : msg.id)}
-                            style={{ 
-                              background: isMe ? 'var(--accent-color)' : 'var(--bg-secondary)', 
-                              color: isMe ? 'var(--accent-text)' : 'var(--text-primary)', 
-                              padding: '0.5rem 0.875rem', 
+                            style={{
+                              background: isMe ? 'var(--accent-color)' : 'var(--bg-secondary)',
+                              color: isMe ? 'var(--accent-text)' : 'var(--text-primary)',
+                              padding: '0.5rem 0.875rem',
                               borderTopLeftRadius: !isMe && !isFirstInGroup ? '0.25rem' : '1.25rem',
                               borderBottomLeftRadius: !isMe && !isLastInGroup ? '0.25rem' : '1.25rem',
                               borderTopRightRadius: isMe && !isFirstInGroup ? '0.25rem' : '1.25rem',
@@ -1389,7 +1509,7 @@ export function Dashboard({ user }: DashboardProps) {
                               {isMe && <CheckCheck size={12} />}
                             </div>
                           </div>
-                          
+
                           {isActive && (
                             <div className="animate-fade-in" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', alignSelf: isMe ? 'flex-end' : 'flex-start', padding: '0.4rem 0.5rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '0.75rem', boxShadow: 'var(--shadow-md)', zIndex: 10 }}>
                               <button onClick={() => { setReplyingTo(msg); setActiveMessageId(null); setEditingMessage(null); document.getElementById('chat-input')?.focus(); }} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', padding: '0 0.25rem', fontWeight: 500 }}>
@@ -1415,7 +1535,7 @@ export function Dashboard({ user }: DashboardProps) {
                   )}
                   <div ref={messagesEndRef} />
                 </div>
-                
+
                 <div style={{ position: 'relative', marginTop: 'auto', background: 'var(--bg-primary)', paddingTop: '0.5rem' }}>
                   {(replyingTo || editingMessage) && (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--bg-secondary)', borderRadius: '1rem', borderLeft: '4px solid var(--accent-color)', marginBottom: '0.5rem' }}>
@@ -1498,10 +1618,56 @@ export function Dashboard({ user }: DashboardProps) {
           />
         )}
 
+        {activeTab === 'exams' && (
+          <ExamsTab t={t as any} examList={examList} subjectList={subjectList} />
+        )}
+
+        {activeTab === 'notifications' && (
+          <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1rem', width: '100%', maxWidth: '800px', margin: '0 auto' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+              {t('nav_home') === 'หน้าหลัก' ? 'การแจ้งเตือน' : 'Notifications'}
+            </h2>
+            {upcomingNotifications.length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem' }}>
+                {t('nav_home') === 'หน้าหลัก' ? 'ไม่มีการแจ้งเตือนใหม่' : 'No new notifications'}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {upcomingNotifications.map((ev, i) => (
+                  <div key={`${ev.id}-${i}`} style={{ background: 'var(--bg-secondary)', padding: '1rem', borderRadius: '12px', borderLeft: `4px solid ${ev.color || 'var(--accent-color)'}`, display: 'flex', alignItems: 'flex-start', gap: '1rem', borderTop: '1px solid var(--border-color)', borderRight: '1px solid var(--border-color)', borderBottom: '1px solid var(--border-color)' }}>
+                    <Bell size={20} color={ev.color || 'var(--text-secondary)'} style={{ marginTop: '0.1rem' }} />
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{ev.title}</span>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        {new Date(ev.date).toLocaleDateString(t('nav_home') === 'หน้าหลัก' ? 'th-TH' : 'en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'users' && isPresident && (
+          <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+            <UserManagementTab
+              handleCreateUser={handleCreateUser}
+              username={createUsername}
+              setUsername={setCreateUsername}
+              password={createPassword}
+              setPassword={setCreatePassword}
+              message={createUserMessage}
+              loading={createUserLoading}
+              userList={userList}
+            />
+          </div>
+        )}
+
         {activeTab === 'subject-details' && selectedSubject && (
           <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <button 
-              onClick={() => setActiveTab('schedule')} 
+            <button
+              onClick={() => setActiveTab('schedule')}
               style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0, fontWeight: 500, alignSelf: 'flex-start' }}
             >
               <ArrowLeft size={18} /> Back
@@ -1534,7 +1700,7 @@ export function Dashboard({ user }: DashboardProps) {
               </div>
               <div style={{ marginTop: '1.5rem' }}>
                 <Button variant="secondary" onClick={(e) => {
-                  e.stopPropagation(); 
+                  e.stopPropagation();
                   setSuggestSubject(selectedSubject.id);
                   setShowSuggestForm(true);
                 }} style={{ width: '100%', padding: '0.4rem', fontSize: '0.875rem' }}>
@@ -1546,7 +1712,7 @@ export function Dashboard({ user }: DashboardProps) {
             {(() => {
               const subjectRequests = homeworkRequests.filter(req => req.subjectId === selectedSubject.id);
               if (subjectRequests.length === 0) return null;
-              
+
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '0.5rem' }}>
                   <h3 style={{ fontSize: '1.125rem', margin: '0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
@@ -1557,7 +1723,7 @@ export function Dashboard({ user }: DashboardProps) {
                       <div key={req.id} style={{ padding: '1rem', borderBottom: idx === subjectRequests.length - 1 ? 'none' : '1px solid var(--border-color)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                           <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.95rem' }}>{req.title}</div>
-                          <div style={{ 
+                          <div style={{
                             fontSize: '0.75rem', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '100px',
                             background: req.status === 'pending' ? 'rgba(255, 149, 0, 0.1)' : req.status === 'approved' ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 59, 48, 0.1)',
                             color: req.status === 'pending' ? '#ff9500' : req.status === 'approved' ? '#34c759' : '#ff3b30',
@@ -1582,13 +1748,13 @@ export function Dashboard({ user }: DashboardProps) {
               </h3>
 
               {/* Tabs */}
-              <div style={{ 
-                display: 'flex', 
-                background: 'var(--bg-primary)', 
-                padding: '0.25rem', 
-                borderRadius: '8px', 
-                marginBottom: '1.25rem', 
-                overflowX: 'auto', 
+              <div style={{
+                display: 'flex',
+                background: 'var(--bg-primary)',
+                padding: '0.25rem',
+                borderRadius: '8px',
+                marginBottom: '1.25rem',
+                overflowX: 'auto',
                 scrollbarWidth: 'none',
                 gap: '0.25rem'
               }}>
@@ -1618,7 +1784,7 @@ export function Dashboard({ user }: DashboardProps) {
 
               {(() => {
                 const subjectHomework = homeworkList.filter(hw => hw.subjectId === selectedSubject.id);
-                
+
                 const now = new Date();
                 now.setHours(0, 0, 0, 0); // Start of today
                 const threeDaysFromNow = new Date(now);
@@ -1635,7 +1801,7 @@ export function Dashboard({ user }: DashboardProps) {
                   if (subjectHwTab === 'overdue') return dueDate < now;
                   if (subjectHwTab === 'urgent') return dueDate >= now && dueDate <= threeDaysFromNow;
                   if (subjectHwTab === 'new') return dueDate > threeDaysFromNow;
-                  
+
                   return true;
                 });
 
@@ -1647,22 +1813,22 @@ export function Dashboard({ user }: DashboardProps) {
                   );
                 }
                 return (
-                  <div style={{ 
-                      display: 'flex', flexDirection: 'column', 
-                      background: 'var(--bg-secondary)', 
-                      borderRadius: '12px', 
-                      border: '1px solid var(--border-color)',
-                      overflow: 'hidden'
+                  <div style={{
+                    display: 'flex', flexDirection: 'column',
+                    background: 'var(--bg-secondary)',
+                    borderRadius: '12px',
+                    border: '1px solid var(--border-color)',
+                    overflow: 'hidden'
                   }}>
                     {filteredHw.map((hw, idx) => {
                       const isCompleted = completedHomeworkIds.has(hw.id);
                       return (
-                        <div 
-                          key={hw.id} 
-                          onClick={() => setSelectedHomework(hw)} 
-                          style={{ 
-                            display: 'flex', alignItems: 'flex-start', gap: '1rem', 
-                            padding: '1rem', 
+                        <div
+                          key={hw.id}
+                          onClick={() => setSelectedHomework(hw)}
+                          style={{
+                            display: 'flex', alignItems: 'flex-start', gap: '1rem',
+                            padding: '1rem',
                             cursor: 'pointer', transition: 'background-color 0.2s',
                             borderBottom: idx === filteredHw.length - 1 ? 'none' : '1px solid var(--border-color)'
                           }}
@@ -1673,9 +1839,9 @@ export function Dashboard({ user }: DashboardProps) {
                             {isCompleted ? <CheckCircle2 size={24} /> : <div style={{ width: '22px', height: '22px', margin: '1px', borderRadius: '50%', border: '2px solid var(--text-secondary)' }} />}
                           </div>
                           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                            <span style={{ color: isCompleted ? 'var(--text-secondary)' : 'var(--text-primary)', textDecoration: isCompleted ? 'line-through' : 'none', fontWeight: 600, fontSize: '0.95rem' }}>{hw.title}</span> 
+                            <span style={{ color: isCompleted ? 'var(--text-secondary)' : 'var(--text-primary)', textDecoration: isCompleted ? 'line-through' : 'none', fontWeight: 600, fontSize: '0.95rem' }}>{hw.title}</span>
                             <span style={{ display: 'inline-flex', alignSelf: 'flex-start', alignItems: 'center', padding: '0.2rem 0.5rem', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '100px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                              <Calendar size={12} style={{marginRight: '0.2rem'}} /> Deadline: {new Date(hw.dueDate).toLocaleDateString()}
+                              <Calendar size={12} style={{ marginRight: '0.2rem' }} /> Deadline: {new Date(hw.dueDate).toLocaleDateString()}
                             </span>
                             <CompletedByAvatars homeworkId={hw.id} allCompleted={allCompletedHomework} users={userList} />
                           </div>
@@ -1729,10 +1895,10 @@ export function Dashboard({ user }: DashboardProps) {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'var(--bg-primary)', zIndex: 1000, display: 'flex', flexDirection: 'column' }} className="animate-fade-in">
           <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <Search size={20} color="var(--text-secondary)" />
-            <input 
+            <input
               autoFocus
-              type="text" 
-              placeholder="Search subjects, teachers, rooms, or homework..." 
+              type="text"
+              placeholder="Search subjects, teachers, rooms, or homework..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               style={{ flex: 1, background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '1.125rem', outline: 'none' }}
@@ -1741,7 +1907,7 @@ export function Dashboard({ user }: DashboardProps) {
               <X size={24} />
             </button>
           </div>
-          
+
           <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
             {searchQuery.trim() === '' ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '800px', margin: '0 auto', paddingTop: '1rem', width: '100%' }}>
@@ -1807,7 +1973,7 @@ export function Dashboard({ user }: DashboardProps) {
                   const q = searchQuery.toLowerCase();
                   const subjects = subjectList.filter(s => s.name.toLowerCase().includes(q) || s.teacher.toLowerCase().includes(q) || s.room.toLowerCase().includes(q));
                   const homework = homeworkList.filter(h => h.title.toLowerCase().includes(q));
-                  
+
                   if (subjects.length === 0 && homework.length === 0) {
                     return <div style={{ textAlign: 'center', color: 'var(--text-secondary)', marginTop: '2rem' }}>No results found for "{searchQuery}"</div>;
                   }
@@ -1847,11 +2013,11 @@ export function Dashboard({ user }: DashboardProps) {
                             {homework.map(h => {
                               const parentSubject = subjectList.find(sub => sub.id === h.subjectId);
                               return (
-                                <div key={h.id} onClick={() => { 
-                                  if(parentSubject) {
+                                <div key={h.id} onClick={() => {
+                                  if (parentSubject) {
                                     handleSubjectClick(parentSubject);
                                     setSelectedHomework(h);
-                                  } 
+                                  }
                                 }} style={{ padding: '1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                   <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                     <CheckSquare size={20} color="#10b981" />
@@ -1931,7 +2097,7 @@ export function Dashboard({ user }: DashboardProps) {
               <button onClick={() => setIsMenuOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={24} /></button>
             </div>
             <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <button 
+              <button
                 onClick={() => setIsSecAMenuOpen(!isSecAMenuOpen)}
                 style={{ background: 'none', border: 'none', width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', cursor: 'pointer', color: 'var(--text-secondary)' }}
               >
@@ -1940,21 +2106,60 @@ export function Dashboard({ user }: DashboardProps) {
                 </div>
                 <ChevronDown size={16} style={{ transform: isSecAMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
               </button>
-              
-              <div className="animate-fade-in" style={{ display: isSecAMenuOpen ? 'flex' : 'none', flexDirection: 'column', gap: '0.5rem' }}>
-                <button onClick={() => { setActiveTab('overview'); setIsMenuOpen(false); }} className="btn btn-secondary" style={{ display: 'flex', justifyContent: 'flex-start', border: 'none', background: activeTab === 'overview' ? 'var(--bg-secondary)' : 'transparent', padding: '1rem', borderRadius: '12px', alignItems: 'center' }}>
-                  <BookOpen size={20} style={{ color: activeTab === 'overview' ? 'var(--accent-color)' : 'var(--text-primary)' }} />
-                  <span style={{ color: activeTab === 'overview' ? 'var(--accent-color)' : 'var(--text-primary)', fontWeight: 500, marginLeft: '0.75rem' }}>{t('nav_overview' as TranslationKey)}</span>
+              <div className="animate-fade-in" style={{ display: isSecAMenuOpen ? 'flex' : 'none', flexDirection: 'column', gap: '0.5rem', position: 'relative' }}>
+                {!isSecA && !isPresident && (
+                  <div style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                    zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    background: 'rgba(var(--bg-primary-rgb), 0.5)',
+                    backdropFilter: 'blur(3px)', borderRadius: '12px', gap: '0.5rem'
+                  }}>
+                    <Lock size={24} color="var(--text-secondary)" />
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>เฉพาะนักศึกษา Sec A</span>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', filter: !isSecA && !isPresident ? 'blur(4px)' : 'none', pointerEvents: !isSecA && !isPresident ? 'none' : 'auto', userSelect: !isSecA && !isPresident ? 'none' : 'auto' }}>
+                  <button onClick={() => { setActiveTab('overview'); setIsMenuOpen(false); }} className="btn btn-secondary" style={{ display: 'flex', justifyContent: 'flex-start', border: 'none', background: activeTab === 'overview' ? 'var(--bg-secondary)' : 'transparent', padding: '1rem', borderRadius: '12px', alignItems: 'center' }}>
+                    <BookOpen size={20} style={{ color: activeTab === 'overview' ? 'var(--accent-color)' : 'var(--text-primary)' }} />
+                    <span style={{ color: activeTab === 'overview' ? 'var(--accent-color)' : 'var(--text-primary)', fontWeight: 500, marginLeft: '0.75rem' }}>{t('nav_homework_overview')}</span>
+                  </button>
+                  <button onClick={() => { setActiveTab('schedule'); setIsMenuOpen(false); }} className="btn btn-secondary" style={{ display: 'flex', justifyContent: 'flex-start', border: 'none', background: activeTab === 'schedule' ? 'var(--bg-secondary)' : 'transparent', padding: '1rem', borderRadius: '12px', alignItems: 'center' }}>
+                    <Clock size={20} style={{ color: activeTab === 'schedule' ? 'var(--accent-color)' : 'var(--text-primary)' }} />
+                    <span style={{ color: activeTab === 'schedule' ? 'var(--accent-color)' : 'var(--text-primary)', fontWeight: 500, marginLeft: '0.75rem' }}>{t('nav_schedule')}</span>
+                  </button>
+                  <button onClick={() => { setActiveTab('exams'); setIsMenuOpen(false); }} className="btn btn-secondary" style={{ display: 'flex', justifyContent: 'flex-start', border: 'none', background: activeTab === 'exams' ? 'var(--bg-secondary)' : 'transparent', padding: '1rem', borderRadius: '12px', alignItems: 'center' }}>
+                    <BookOpen size={20} style={{ color: activeTab === 'exams' ? 'var(--accent-color)' : 'var(--text-primary)' }} />
+                    <span style={{ color: activeTab === 'exams' ? 'var(--accent-color)' : 'var(--text-primary)', fontWeight: 500, marginLeft: '0.75rem' }}>{t('nav_home') === 'หน้าหลัก' ? 'ตารางสอบ' : 'Exams'}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ padding: '1rem', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', padding: '0.5rem' }}>
+                  {t('menu_settings_title' as TranslationKey)}
+                </div>
+                <button onClick={() => { setActiveTab('profile'); setIsMenuOpen(false); }} className="btn btn-secondary" style={{ display: 'flex', justifyContent: 'flex-start', border: 'none', background: activeTab === 'profile' ? 'var(--bg-secondary)' : 'transparent', padding: '1rem', borderRadius: '12px', alignItems: 'center' }}>
+                  <UserCircle size={20} style={{ color: activeTab === 'profile' ? 'var(--accent-color)' : 'var(--text-primary)' }} />
+                  <span style={{ color: activeTab === 'profile' ? 'var(--accent-color)' : 'var(--text-primary)', fontWeight: 500, marginLeft: '0.75rem' }}>{t('nav_profile' as TranslationKey)}</span>
                 </button>
-                <button onClick={() => { setActiveTab('schedule'); setIsMenuOpen(false); }} className="btn btn-secondary" style={{ display: 'flex', justifyContent: 'flex-start', border: 'none', background: activeTab === 'schedule' ? 'var(--bg-secondary)' : 'transparent', padding: '1rem', borderRadius: '12px', alignItems: 'center' }}>
-                  <Calendar size={20} style={{ color: activeTab === 'schedule' ? 'var(--accent-color)' : 'var(--text-primary)' }} />
-                  <span style={{ color: activeTab === 'schedule' ? 'var(--accent-color)' : 'var(--text-primary)', fontWeight: 500, marginLeft: '0.75rem' }}>{t('nav_schedule' as TranslationKey)}</span>
-                </button>
-                <button onClick={() => { setActiveTab('analytics'); setIsMenuOpen(false); }} className="btn btn-secondary" style={{ display: 'flex', justifyContent: 'flex-start', border: 'none', background: activeTab === 'analytics' ? 'var(--bg-secondary)' : 'transparent', padding: '1rem', borderRadius: '12px', alignItems: 'center' }}>
-                  <BarChart2 size={20} style={{ color: activeTab === 'analytics' ? 'var(--accent-color)' : 'var(--text-primary)' }} />
-                  <span style={{ color: activeTab === 'analytics' ? 'var(--accent-color)' : 'var(--text-primary)', fontWeight: 500, marginLeft: '0.75rem' }}>{t('nav_stats' as TranslationKey)}</span>
+                <button onClick={() => { signOut(auth); setIsMenuOpen(false); }} className="btn btn-secondary" style={{ display: 'flex', justifyContent: 'flex-start', border: 'none', background: 'rgba(255,59,48,0.1)', padding: '1rem', borderRadius: '12px', alignItems: 'center' }}>
+                  <LogOut size={20} style={{ color: '#ff3b30' }} />
+                  <span style={{ color: '#ff3b30', fontWeight: 500, marginLeft: '0.75rem' }}>{t('nav_logout' as TranslationKey)}</span>
                 </button>
               </div>
+
+              {isPresident && (
+                <div style={{ padding: '1rem', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', padding: '0.5rem' }}>
+                    {t('nav_home') === 'หน้าหลัก' ? 'เครื่องมือประธาน' : 'President Tools'}
+                  </div>
+                  <button onClick={() => { setActiveTab('users'); setIsMenuOpen(false); }} className="btn btn-secondary" style={{ display: 'flex', justifyContent: 'flex-start', border: 'none', background: activeTab === 'users' ? 'var(--bg-secondary)' : 'transparent', padding: '1rem', borderRadius: '12px', alignItems: 'center' }}>
+                    <UserCircle size={20} style={{ color: activeTab === 'users' ? 'var(--accent-color)' : 'var(--text-primary)' }} />
+                    <span style={{ color: activeTab === 'users' ? 'var(--accent-color)' : 'var(--text-primary)', fontWeight: 500, marginLeft: '0.75rem' }}>{t('nav_home') === 'หน้าหลัก' ? 'จัดการรายชื่อผู้ใช้' : 'Manage Users'}</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </>
@@ -1975,8 +2180,8 @@ export function Dashboard({ user }: DashboardProps) {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <button 
-                onClick={() => { toggleHomeworkCompletion(selectedHomework.id); setSelectedHomework(null); }} 
+              <button
+                onClick={() => { toggleHomeworkCompletion(selectedHomework.id); setSelectedHomework(null); }}
                 className="btn"
                 style={{ width: '100%', borderRadius: '12px', background: completedHomeworkIds.has(selectedHomework.id) ? 'var(--bg-primary)' : 'var(--accent-color)', color: completedHomeworkIds.has(selectedHomework.id) ? 'var(--text-primary)' : 'var(--accent-text)', border: completedHomeworkIds.has(selectedHomework.id) ? '1px solid var(--border-color)' : 'none', fontWeight: 600, padding: '0.85rem' }}
               >
@@ -1992,14 +2197,14 @@ export function Dashboard({ user }: DashboardProps) {
                   </>
                 )}
               </button>
-              <button 
-                onClick={() => { 
+              <button
+                onClick={() => {
                   setChatInput(`[HW_SHARE:${selectedHomework.id}]`);
                   setSelectedHomework(null);
                   setActiveChatId(null);
                   setActiveTab('chat');
-                }} 
-                className="btn btn-secondary" 
+                }}
+                className="btn btn-secondary"
                 style={{ width: '100%', borderRadius: '12px', border: '1px solid var(--border-color)', background: 'var(--bg-primary)', padding: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 600 }}
               >
                 <Share2 size={18} />
@@ -2032,4 +2237,56 @@ const navBtnStyle = (isActive: boolean): React.CSSProperties => ({
   flex: 1
 });
 
+export const CompletedByAvatars = ({ homeworkId, allCompleted, users }: { homeworkId: string, allCompleted: { userId: string, homeworkId: string }[], users: any[] }) => {
+  const completedUsers = allCompleted.filter(c => c.homeworkId === homeworkId);
+  if (completedUsers.length === 0) return null;
 
+  const maxToShow = 4;
+  const avatarsToShow = completedUsers.slice(0, maxToShow);
+  const extraCount = completedUsers.length - maxToShow;
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', marginTop: '0.75rem' }}>
+      {avatarsToShow.map((cu, idx) => {
+        const u = users.find(user => user.id === cu.userId);
+        if (!u || !u.avatarUrl) return null;
+        return (
+          <img
+            key={cu.userId}
+            src={u.avatarUrl}
+            title={u.displayName || u.username}
+            style={{
+              width: '26px',
+              height: '26px',
+              borderRadius: '50%',
+              border: '2px solid var(--bg-secondary)',
+              marginLeft: idx === 0 ? 0 : '-10px',
+              objectFit: 'cover',
+              zIndex: 10 - idx
+            }}
+            alt={u.username}
+          />
+        );
+      })}
+      {extraCount > 0 && (
+        <div style={{
+          width: '26px',
+          height: '26px',
+          borderRadius: '50%',
+          border: '2px solid var(--bg-secondary)',
+          marginLeft: '-10px',
+          background: 'var(--bg-primary)',
+          color: 'var(--text-secondary)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '0.7rem',
+          fontWeight: 600,
+          zIndex: 0
+        }}>
+          +{extraCount}
+        </div>
+      )}
+    </div>
+  );
+};

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
-import { Megaphone, Send, AlertTriangle, Info, XCircle, Trash2 } from 'lucide-react';
+import { Megaphone, Send, AlertTriangle, Info, XCircle, Trash2, Edit2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { db } from '../../firebase';
 import { collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, updateDoc } from 'firebase/firestore';
@@ -11,6 +11,7 @@ export function BroadcastTab() {
   const [type, setType] = useState<'info' | 'warning' | 'urgent'>('info');
   const [loading, setLoading] = useState(false);
   const [announcements, setAnnouncements] = useState<AnnouncementData[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     const q = query(collection(db, 'announcements'), orderBy('createdAt', 'desc'));
@@ -27,24 +28,46 @@ export function BroadcastTab() {
     
     setLoading(true);
     try {
-      // Deactivate all old ones first (optional, but good practice if you only want 1 active banner)
-      const activeAnnouncements = announcements.filter(a => a.active);
-      for (const a of activeAnnouncements) {
-        await updateDoc(doc(db, 'announcements', a.id), { active: false });
-      }
+      if (editingId) {
+        await updateDoc(doc(db, 'announcements', editingId), {
+          message: message.trim(),
+          type,
+          updatedAt: new Date().toISOString()
+        });
+        setEditingId(null);
+      } else {
+        // Deactivate all old ones first (optional, but good practice if you only want 1 active banner)
+        const activeAnnouncements = announcements.filter(a => a.active);
+        for (const a of activeAnnouncements) {
+          await updateDoc(doc(db, 'announcements', a.id), { active: false });
+        }
 
-      await addDoc(collection(db, 'announcements'), {
-        message: message.trim(),
-        type,
-        active: true,
-        createdAt: new Date().toISOString()
-      });
+        await addDoc(collection(db, 'announcements'), {
+          message: message.trim(),
+          type,
+          active: true,
+          createdAt: new Date().toISOString()
+        });
+      }
       setMessage('');
+      setType('info');
     } catch (err) {
-      alert("Error sending broadcast");
+      alert("Error saving broadcast");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEdit = (ann: AnnouncementData) => {
+    setMessage(ann.message);
+    setType(ann.type);
+    setEditingId(ann.id);
+  };
+
+  const cancelEdit = () => {
+    setMessage('');
+    setType('info');
+    setEditingId(null);
   };
 
   const handleDelete = async (id: string) => {
@@ -70,7 +93,7 @@ export function BroadcastTab() {
       {/* Compose Broadcast */}
       <div style={{ background: 'var(--bg-secondary)', padding: '2rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
         <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem', fontWeight: 600, margin: '0 0 0.5rem 0' }}>
-          <Megaphone size={24} color="var(--accent-color)" /> Send a Broadcast
+          <Megaphone size={24} color="var(--accent-color)" /> {editingId ? 'Edit Broadcast' : 'Send a Broadcast'}
         </h3>
         <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
           Instantly show a banner notification on every user's screen. Only one broadcast can be active at a time.
@@ -122,9 +145,16 @@ export function BroadcastTab() {
             </div>
           </div>
 
-          <Button type="submit" isLoading={loading} style={{ alignSelf: 'flex-start', padding: '0.75rem 2rem', gap: '0.5rem', fontSize: '1rem', fontWeight: 600 }}>
-            <Send size={18} /> Send Broadcast
-          </Button>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <Button type="submit" isLoading={loading} style={{ alignSelf: 'flex-start', padding: '0.75rem 2rem', gap: '0.5rem', fontSize: '1rem', fontWeight: 600 }}>
+              <Send size={18} /> {editingId ? 'Update Broadcast' : 'Send Broadcast'}
+            </Button>
+            {editingId && (
+              <Button type="button" variant="secondary" onClick={cancelEdit} style={{ padding: '0.75rem 2rem', fontSize: '1rem', fontWeight: 600 }}>
+                Cancel
+              </Button>
+            )}
+          </div>
         </form>
       </div>
 
@@ -136,6 +166,7 @@ export function BroadcastTab() {
           <table className="admin-data-table">
             <thead>
               <tr>
+                <th>Date</th>
                 <th>Message</th>
                 <th>Type</th>
                 <th>Status</th>
@@ -145,6 +176,9 @@ export function BroadcastTab() {
             <tbody>
               {announcements.map((ann) => (
                 <tr key={ann.id} style={{ background: ann.active ? 'rgba(52, 199, 89, 0.05)' : 'transparent' }}>
+                  <td style={{ whiteSpace: 'nowrap', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    {ann.createdAt ? new Date(ann.createdAt).toLocaleString('th-TH') : 'N/A'}
+                  </td>
                   <td style={{ maxWidth: '300px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {ann.message}
                   </td>
@@ -161,6 +195,13 @@ export function BroadcastTab() {
                   </td>
                   <td style={{ textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                      <button 
+                        onClick={() => handleEdit(ann)}
+                        style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: 'none', padding: '0.4rem', borderRadius: '8px', cursor: 'pointer' }}
+                        title="Edit"
+                      >
+                        <Edit2 size={16} />
+                      </button>
                       <Button 
                         variant={ann.active ? 'secondary' : 'primary'} 
                         onClick={() => toggleActive(ann.id, ann.active)}
@@ -181,7 +222,7 @@ export function BroadcastTab() {
               ))}
               {announcements.length === 0 && (
                 <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
                     No broadcasts found.
                   </td>
                 </tr>

@@ -116,6 +116,8 @@ export function UserManagementTab({
                 <th>Username</th>
                 <th>Status</th>
                 <th>Can Add Homework</th>
+                <th>Sec A</th>
+                <th>President</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
@@ -172,6 +174,68 @@ export function UserManagementTab({
                           }}>
                             {user.canAddHomework && <Check size={14} color="#34c759" />}
                             {!user.canAddHomework && <X size={14} color="var(--text-secondary)" />}
+                          </span>
+                        </span>
+                      </label>
+                    </td>
+                    <td>
+                      <label style={{ position: 'relative', display: 'inline-block', width: '50px', height: '26px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={!!user.isSecA}
+                          onChange={async (e) => {
+                            try {
+                              await updateDoc(doc(db, 'users', user.id), { isSecA: e.target.checked });
+                            } catch (err) { alert("Error updating user permission"); }
+                          }}
+                          style={{ opacity: 0, width: 0, height: 0 }}
+                        />
+                        <span style={{
+                          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                          backgroundColor: user.isSecA ? '#34c759' : 'var(--border-color)',
+                          borderRadius: '30px', transition: '.3s'
+                        }}>
+                          <span style={{
+                            position: 'absolute', content: '""', height: '22px', width: '22px',
+                            left: user.isSecA ? '26px' : '2px', bottom: '2px',
+                            backgroundColor: 'var(--white, #ffffff)',
+                            borderRadius: '50%', transition: '.3s',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                          }}>
+                            {user.isSecA && <Check size={14} color="#34c759" />}
+                            {!user.isSecA && <X size={14} color="var(--text-secondary)" />}
+                          </span>
+                        </span>
+                      </label>
+                    </td>
+                    <td>
+                      <label style={{ position: 'relative', display: 'inline-block', width: '50px', height: '26px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={!!user.isPresident}
+                          onChange={async (e) => {
+                            try {
+                              await updateDoc(doc(db, 'users', user.id), { isPresident: e.target.checked });
+                            } catch (err) { alert("Error updating user permission"); }
+                          }}
+                          style={{ opacity: 0, width: 0, height: 0 }}
+                        />
+                        <span style={{
+                          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                          backgroundColor: user.isPresident ? '#007aff' : 'var(--border-color)',
+                          borderRadius: '30px', transition: '.3s'
+                        }}>
+                          <span style={{
+                            position: 'absolute', content: '""', height: '22px', width: '22px',
+                            left: user.isPresident ? '26px' : '2px', bottom: '2px',
+                            backgroundColor: 'var(--white, #ffffff)',
+                            borderRadius: '50%', transition: '.3s',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                          }}>
+                            {user.isPresident && <Check size={14} color="#007aff" />}
+                            {!user.isPresident && <X size={14} color="var(--text-secondary)" />}
                           </span>
                         </span>
                       </label>

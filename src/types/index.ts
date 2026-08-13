@@ -16,6 +16,8 @@ export interface UserData {
   avatarUrl?: string;
   isOnline: boolean;
   canAddHomework?: boolean;
+  isSecA?: boolean;
+  isPresident?: boolean;
   createdAt: string;
 }
 
@@ -34,6 +36,7 @@ export interface CalendarEventData {
   title: string;
   color: string;
   createdAt: string;
+  readOnly?: boolean;
 }
 
 export interface HomeworkRequestData {
@@ -67,5 +70,17 @@ export interface AnnouncementData {
   message: string;
   type: 'info' | 'warning' | 'urgent';
   active: boolean;
+  createdAt: string;
+}
+
+export interface ExamData {
+  id: string;
+  title: string;
+  subjectId: string;
+  examDate: string;
+  startTime: string;
+  endTime: string;
+  room: string;
+  notes: string;
   createdAt: string;
 }

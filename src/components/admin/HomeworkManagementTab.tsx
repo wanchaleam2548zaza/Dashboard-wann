@@ -87,7 +87,7 @@ export function HomeworkManagementTab({
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '2rem' }}>
         {/* Add/Edit Form */}
-        <div>
+        <div style={{ minWidth: 0 }}>
           <h4 className="ios-list-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <PlusCircle size={18} /> {editingHomeworkId ? 'Edit Homework' : 'Add Homework'}
           </h4>
@@ -125,7 +125,7 @@ export function HomeworkManagementTab({
         </div>
 
         {/* Existing Homework for this subject */}
-        <div>
+        <div style={{ minWidth: 0 }}>
           <h4 className="ios-list-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <CheckSquare size={18} color="var(--accent-color)" /> Existing Homework
           </h4>

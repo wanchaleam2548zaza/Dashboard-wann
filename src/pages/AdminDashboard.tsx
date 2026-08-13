@@ -3,12 +3,13 @@ import { secondaryAuth, db } from '../firebase';
 import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { collection, onSnapshot, setDoc, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { Button } from '../components/ui/Button';
-import { Shield, Users, LogOut, LayoutDashboard, BookOpen, CheckSquare, BarChart2, Bell, Search, X, Megaphone } from 'lucide-react';
+import { Shield, Users, LogOut, LayoutDashboard, BookOpen, CheckSquare, BarChart2, Bell, Search, X, Megaphone, FileText } from 'lucide-react';
 import { UserManagementTab } from '../components/admin/UserManagementTab';
 import { ScheduleManagementTab } from '../components/admin/ScheduleManagementTab';
 import { HomeworkManagementTab } from '../components/admin/HomeworkManagementTab';
 import { BroadcastTab } from '../components/admin/BroadcastTab';
-import type { UserData, SubjectData, HomeworkData, HomeworkRequestData } from '../types';
+import { ExamManagementTab } from '../components/admin/ExamManagementTab';
+import type { UserData, SubjectData, HomeworkData, HomeworkRequestData, ExamData } from '../types';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -16,7 +17,7 @@ interface AdminDashboardProps {
 
 
 export function AdminDashboard({ onLogout }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'subjects' | 'homework' | 'analytics' | 'subject-details' | 'notifications' | 'broadcasts'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'subjects' | 'homework' | 'analytics' | 'subject-details' | 'notifications' | 'broadcasts' | 'exams'>('overview');
 
 
   const [username, setUsername] = useState('');
@@ -53,6 +54,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const [dbError, setDbError] = useState<string | null>(null);
+  const [examList, setExamList] = useState<ExamData[]>([]);
 
   useEffect(() => {
     // Subscribe to users collection
@@ -123,12 +125,25 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
       (error) => console.error("Firestore requests error:", error)
     );
 
+    const unsubscribeExams = onSnapshot(
+      collection(db, 'exams'),
+      (snapshot) => {
+        const exams: ExamData[] = [];
+        snapshot.forEach((doc) => {
+          exams.push({ id: doc.id, ...doc.data() } as ExamData);
+        });
+        setExamList(exams);
+      },
+      (error) => console.error("Firestore exams error:", error)
+    );
+
     return () => {
       unsubscribeUsers();
       unsubscribeSubjects();
       unsubscribeHomework();
       unsubscribeCompletions();
       unsubscribeHwRequests();
+      unsubscribeExams();
     };
   }, []);
 
@@ -325,6 +340,10 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
           <button onClick={() => setActiveTab('analytics')} className={`admin-sidebar-btn ${activeTab === 'analytics' ? 'active' : ''}`}>
             <BarChart2 size={20} /> Analytics
           </button>
+
+          <button onClick={() => setActiveTab('exams')} className={`admin-sidebar-btn ${activeTab === 'exams' ? 'active' : ''}`}>
+            <FileText size={20} /> Exams
+          </button>
         </nav>
 
         <div style={{ marginTop: 'auto' }}>
@@ -471,6 +490,22 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
               )}
             </div>
           </div>
+        )}
+
+        {activeTab === 'exams' && (
+          <ExamManagementTab
+            examList={examList}
+            subjectList={subjectList}
+            onAddExam={async (data) => {
+              await addDoc(collection(db, 'exams'), { ...data, createdAt: new Date().toISOString() });
+            }}
+            onUpdateExam={async (id, data) => {
+              await updateDoc(doc(db, 'exams', id), data);
+            }}
+            onDeleteExam={async (id) => {
+              await deleteDoc(doc(db, 'exams', id));
+            }}
+          />
         )}
 
         {activeTab === 'notifications' && (
